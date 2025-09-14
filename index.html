@@ -786,7 +786,7 @@
     <div id="firebase-config-modal" class="modal">
         <div class="modal-content-lg text-left">
             <h3 class="text-2xl font-bold text-gray-800 mb-4 text-center">Configurar Base de Dados</h3>
-            <p class="text-gray-600 mb-6 text-center">Para guardar os dados permanentemente, precisa de seguir estes 4 passos:</p>
+            <p class="text-gray-600 mb-6 text-center">Para guardar os dados permanentemente no seu site (ex: Wix), precisa de conectar a sua própria base de dados Firebase.</p>
             <form id="firebase-config-form">
                 <div class="space-y-4 text-sm">
                     <p><strong>1. Crie um Projeto Firebase:</strong> Aceda ao <a href="https://console.firebase.google.com/" target="_blank" class="text-blue-600 hover:underline font-semibold">seu painel do Firebase</a> e crie um novo projeto (se ainda não tiver um).</p>
@@ -1688,6 +1688,10 @@ service cloud.firestore {
         const resumoPagamentoDiv = document.getElementById('resumo-pagamento');
         const gerarQrcodeBtn = document.getElementById('gerar-qrcode-btn');
         const qrcodeContainer = document.getElementById('qrcode-container');
+        const paymentForm = document.getElementById('payment-form');
+
+        // URL do seu servidor Vercel para que as requisições sejam enviadas para o servidor correto
+        const backendUrl = 'https://meuprojetodepagamento-kojx78uyg-wellingtons-projects-02014e31.vercel.app';
 
         function populatePagamentoPage() {
             const nomeProjeto = document.getElementById('tipoProjeto').options[document.getElementById('tipoProjeto').selectedIndex].text;
@@ -1707,29 +1711,67 @@ service cloud.firestore {
             qrcodeContainer.innerHTML = '';
         }
 
-        gerarQrcodeBtn.addEventListener('click', () => {
-            const totalCusto = parseCurrency(totalGastoElement.textContent);
+        gerarQrcodeBtn.addEventListener('click', async () => {
+             const totalCusto = parseCurrency(totalGastoElement.textContent);
             const paymentDetails = {
                 valor: totalCusto,
                 parcelas: parseInt(parcelasGeralSelect.value, 10),
                 cliente: `${nomeInput.value} ${sobrenomeInput.value}`.trim()
             };
-            
-            // Cria a string para o QR Code (um JSON simplificado)
-            const qrCodeData = JSON.stringify(paymentDetails);
 
-            // Limpa o conteúdo anterior
-            qrcodeContainer.innerHTML = '';
-            
-            // Gera o QR Code
-            const qrcode = new QRCode(qrcodeContainer, {
-                text: qrCodeData,
-                width: 128,
-                height: 128,
-                colorDark : "#000000",
-                colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.H
-            });
+            // Faz a requisição para o servidor Vercel
+            try {
+                const response = await fetch(`${backendUrl}/create_payment`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(paymentDetails)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Erro do servidor: ${response.status}`);
+                }
+
+                const responseData = await response.json();
+
+                // Limpa o conteúdo anterior
+                qrcodeContainer.innerHTML = '';
+                
+                // Gera o QR Code com o conteúdo da resposta do servidor
+                if (responseData.qr_code) {
+                    const qrcode = new QRCode(qrcodeContainer, {
+                        text: responseData.qr_code, // Usa o QR Code retornado pelo servidor
+                        width: 128,
+                        height: 128,
+                        colorDark : "#000000",
+                        colorLight : "#ffffff",
+                        correctLevel : QRCode.CorrectLevel.H
+                    });
+                     // Adiciona o botão para copiar o código Pix
+                     const copyPixBtn = document.createElement('button');
+                     copyPixBtn.id = 'copy-pix-btn';
+                     copyPixBtn.className = 'mt-4 px-6 py-2 bg-blue-600 text-white font-semibold rounded-full shadow-md hover:bg-blue-700';
+                     copyPixBtn.textContent = 'Copiar Código Pix';
+                     qrcodeContainer.appendChild(copyPixBtn);
+
+                     copyPixBtn.addEventListener('click', () => {
+                         const pixCode = responseData.pix_code;
+                         if (pixCode) {
+                             // Copia o código Pix para a área de transferência
+                             navigator.clipboard.writeText(pixCode).then(() => {
+                                 alert('Código Pix copiado com sucesso!');
+                             }).catch(err => {
+                                 console.error('Erro ao copiar o código Pix:', err);
+                                 alert('Erro ao copiar o código Pix.');
+                             });
+                         }
+                     });
+                } else {
+                    alert('Erro ao gerar o QR Code. O servidor não retornou um código válido.');
+                }
+            } catch (error) {
+                console.error('Erro na requisição:', error);
+                alert('Erro ao se comunicar com o servidor. Verifique a consola.');
+            }
         });
 
         // --- Lógica de Edição e Geração do Contrato ---

@@ -1,0 +1,2432 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciamento de Clientes e Projetos</title>
+    <!-- Inclui a biblioteca Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Bibliotecas para gerar PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Biblioteca para gerar QR Code -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        /* Classe para campos somente leitura */
+        .readonly-field {
+            background-color: #e5e7eb; /* cor de fundo cinza claro */
+            cursor: not-allowed;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content-lg {
+            background-color: #fff;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .modal-content {
+            background-color: #fff;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .proposal-modal-content {
+             background-color: #fff;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 800px;
+            width: 90%;
+        }
+        .error-border {
+            border-color: #ef4444 !important;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
+
+    <!-- Indicador de Status da Base de Dados -->
+    <div id="db-status-indicator" class="fixed top-4 right-4 flex items-center px-3 py-1 rounded-full text-sm font-semibold transition-all duration-300 hidden">
+        <span class="w-3 h-3 rounded-full mr-2"></span>
+        <span>Base de Dados</span>
+    </div>
+
+    <!-- Container principal que gerencia as páginas -->
+    <div class="bg-white p-4 sm:p-8 rounded-xl shadow-lg w-full max-w-4xl border border-gray-200">
+        
+        <!-- Navegação entre as páginas -->
+        <nav class="relative mb-6 border-b-2 border-gray-200 pb-4">
+            <!-- Botão do Menu Hamburguer (visível em telas pequenas) -->
+            <div class="sm:hidden flex justify-end">
+                <button id="menu-toggle" class="p-2 rounded-md text-gray-600 hover:bg-gray-100 focus:outline-none">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+                </button>
+            </div>
+            
+            <!-- Links de Navegação -->
+            <div id="menu-links" class="hidden sm:flex sm:justify-center sm:items-center sm:gap-2 flex-col sm:flex-row gap-2 mt-4 sm:mt-0 absolute sm:relative w-full sm:w-auto bg-white sm:bg-transparent shadow-md sm:shadow-none rounded-lg sm:rounded-none p-4 sm:p-0 z-20">
+                <button id="btn-cadastro" class="w-full sm:w-auto px-4 py-2 font-semibold text-base text-center text-white bg-indigo-600 rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
+                    Cadastro
+                </button>
+                <button id="btn-ficha-tecnica" class="w-full sm:w-auto px-4 py-2 font-semibold text-base text-center text-gray-700 bg-gray-200 rounded-md shadow-sm hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-colors duration-200">
+                    Ficha
+                </button>
+                <button id="btn-orcamento" class="w-full sm:w-auto px-4 py-2 font-semibold text-base text-center text-gray-700 bg-gray-200 rounded-md shadow-sm hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-colors duration-200">
+                    Orçamento
+                </button>
+                <button id="btn-pagamento" class="w-full sm:w-auto px-4 py-2 font-semibold text-base text-center text-gray-700 bg-gray-200 rounded-md shadow-sm hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-colors duration-200">
+                    Pagamento
+                </button>
+                <button id="btn-contrato" class="w-full sm:w-auto px-4 py-2 font-semibold text-base text-center text-gray-700 bg-gray-200 rounded-md shadow-sm hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-colors duration-200">
+                    Acesso restrito
+                </button>
+                <button id="btn-colaborador" class="w-full sm:w-auto px-4 py-2 font-semibold text-base text-center text-gray-700 bg-gray-200 rounded-md shadow-sm hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-colors duration-200">
+                    Colaborador
+                </button>
+            </div>
+        </nav>
+        
+        <!-- Seção do Formulário de Cadastro (visível por padrão) -->
+        <div id="cadastro-page" class="page-content">
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 mb-6 text-center">Cadastro de Clientes</h1>
+            <p class="text-gray-600 text-center mb-8">Preencha os campos abaixo para se cadastrar. Os dados serão salvos de forma segura.</p>
+            
+            <form id="cadastro-form" class="space-y-6">
+                
+                <!-- Linha para Nome e Sobrenome -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="nome" class="block text-sm font-medium text-gray-700">Nome</label>
+                        <input type="text" id="nome" name="nome" required class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200">
+                    </div>
+                    <div>
+                        <label for="sobrenome" class="block text-sm font-medium text-gray-700">Sobrenome</label>
+                        <input type="text" id="sobrenome" name="sobrenome" required class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200">
+                    </div>
+                </div>
+
+                <!-- Linha para Endereço, CEP e Estado -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label for="endereco" class="block text-sm font-medium text-gray-700">Endereço</label>
+                        <input type="text" id="endereco" name="endereco" required class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200">
+                    </div>
+                    <div>
+                        <label for="cep" class="block text-sm font-medium text-gray-700">CEP</label>
+                        <input type="text" id="cep" name="cep" required class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200">
+                        <p id="cep-message" class="mt-2 text-sm text-red-500 hidden">CEP não encontrado ou inválido.</p>
+                    </div>
+                    <div>
+                        <label for="estado" class="block text-sm font-medium text-gray-700">Estado</label>
+                        <select id="estado" name="estado" required class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200">
+                            <option value="" disabled selected>Selecione o estado</option>
+                            <option value="AC">Acre</option>
+                            <option value="AL">Alagoas</option>
+                            <option value="AP">Amapá</option>
+                            <option value="AM">Amazonas</option>
+                            <option value="BA">Bahia</option>
+                            <option value="CE">Ceará</option>
+                            <option value="DF">Distrito Federal</option>
+                            <option value="ES">Espírito Santo</option>
+                            <option value="GO">Goiás</option>
+                            <option value="MA">Maranhão</option>
+                            <option value="MT">Mato Grosso</option>
+                            <option value="MS">Mato Grosso do Sul</option>
+                            <option value="MG">Minas Gerais</option>
+                            <option value="PA">Pará</option>
+                            <option value="PB">Paraíba</option>
+                            <option value="PR">Paraná</option>
+                            <option value="PE">Pernambuco</option>
+                            <option value="PI">Piauí</option>
+                            <option value="RJ">Rio de Janeiro</option>
+                            <option value="RN">Rio Grande do Norte</option>
+                            <option value="RS">Rio Grande do Sul</option>
+                            <option value="RO">Rondônia</option>
+                            <option value="RR">Roraima</option>
+                            <option value="SC">Santa Catarina</option>
+                            <option value="SP">São Paulo</option>
+                            <option value="SE">Sergipe</option>
+                            <option value="TO">Tocantins</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Linha para Bairro, Cidade e País -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label for="bairro" class="block text-sm font-medium text-gray-700">Bairro</label>
+                        <input type="text" id="bairro" name="bairro" required class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200">
+                    </div>
+                    <div>
+                        <label for="cidade" class="block text-sm font-medium text-gray-700">Cidade</label>
+                        <input type="text" id="cidade" name="cidade" required class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200">
+                    </div>
+                    <div>
+                        <label for="pais" class="block text-sm font-medium text-gray-700">País</label>
+                        <select id="pais" name="pais" required class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200">
+                            <option value="" disabled selected>Selecione o país</option>
+                            <option value="BR">Brasil</option>
+                            <option value="PT">Portugal</option>
+                            <option value="US">Estados Unidos</option>
+                            <option value="AR">Argentina</option>
+                            <option value="CO">Colômbia</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Linha para Número, RG e CPF -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label for="numeroCasa" class="block text-sm font-medium text-gray-700">Número</label>
+                        <input type="text" id="numeroCasa" name="numeroCasa" required class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200">
+                    </div>
+                    <div>
+                        <label for="rg" class="block text-sm font-medium text-gray-700">RG</label>
+                        <input type="text" id="rg" name="rg" required class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200">
+                    </div>
+                    <div>
+                        <label for="cpf" class="block text-sm font-medium text-gray-700">CPF</label>
+                        <input type="text" id="cpf" name="cpf" required class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200">
+                    </div>
+                </div>
+                
+                <!-- Linha para Profissão e Upload de Arquivo -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Campo de Profissão com Datalist para autocompletar -->
+                    <div>
+                        <label for="profissao" class="block text-sm font-medium text-gray-700">Profissão</label>
+                        <input list="profissoes" id="profissao" name="profissao" required class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200">
+                        <p class="mt-1 text-sm text-gray-500">Caso não encontre sua profissão na lista, favor digitar!</p>
+                        <datalist id="profissoes">
+                            <option value="Acupunturista">
+                            <option value="Administrador">
+                            <option value="Advogado">
+                            <option value="Agrônomo">
+                            <option value="Analista de Sistemas">
+                            <option value="Arquiteto">
+                            <option value="Artesão">
+                            <option value="Astrônomo">
+                            <option value="Auditor">
+                            <option value="Bibliotecário">
+                            <option value="Biólogo">
+                            <option value="Bombeiro">
+                            <option value="Cabeleireiro">
+                            <option value="Cenógrafo">
+                            <option value="Chef de Cozinha">
+                            <option value="Cientista de Dados">
+                            <option value="Contador">
+                            <option value="Corretor de Imóveis">
+                            <option value="Cozinheiro">
+                            <option value="Decorador">
+                            <option value="Dentista">
+                            <option value="Designer de Interiores">
+                            <option value="Designer Gráfico">
+                            <option value="Detetive Particular">
+                            <option value="Eletricista">
+                            <option value="Encanador">
+                            <option value="Enfermeiro">
+                            <option value="Engenheiro Civil">
+                            <option value="Engenheiro de Software">
+                            <option value="Esteticista">
+                            <option value="Farmacêutico">
+                            <option value="Fotógrafo">
+                            <option value="Geólogo">
+                            <option value="Historiador">
+                            <option value="Jardineiro">
+                            <option value="Jornalista">
+                            <option value="Limpador de Vidros">
+                            <option value="Maquiador">
+                            <option value="Massagista">
+                            <option value="Mecânico">
+                            <option value="Médico">
+                            <option value="Músico">
+                            <option value="Nutricionista">
+                            <option value="Padeiro">
+                            <option value="Pedreiro">
+                            <option value="Personal Trainer">
+                            <option value="Pintor">
+                            <option value="Programador">
+                            <option value="Psicólogo">
+                            <option value="Publicitário">
+                            <option value="Químico">
+                            <option value="Radiologista">
+                            <option value="Redator">
+                            <option value="Relojoeiro">
+                            <option value="Serralheiro">
+                            <option value="Sociólogo">
+                            <option value="Soldador">
+                            <option value="Técnico em Eletrônica">
+                            <option value="Técnico de Informática">
+                            <option value="Tradutor">
+                            <option value="Veterinário">
+                            <option value="Vendedor">
+                        </datalist>
+                    </div>
+
+                    <!-- Campo de Upload de Arquivos -->
+                    <div>
+                        <label for="arquivos" class="block text-sm font-medium text-gray-700">Anexar documentos "RG" e "CPF"</label>
+                        <input type="file" id="arquivos" name="arquivos" multiple class="mt-1 block w-full text-sm text-gray-500
+                          file:mr-4 file:py-2 file:px-4
+                          file:rounded-full file:border-0
+                          file:text-sm file:font-semibold
+                          file:bg-indigo-50 file:text-indigo-700
+                          hover:file:bg-indigo-100" />
+                          <p class="mt-1 text-sm text-gray-500">Permitido anexar mais de um arquivo.</p>
+                    </div>
+                </div>
+
+                <!-- Linha para Estado Civil, Email e Telefone -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label for="estadoCivil" class="block text-sm font-medium text-gray-700">Estado Civil</label>
+                        <select id="estadoCivil" name="estadoCivil" required class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200">
+                            <option value="" disabled selected>Selecione seu estado civil</option>
+                            <option value="solteiro">Solteiro(a)</option>
+                            <option value="casado">Casado(a)</option>
+                            <option value="divorciado">Divorciado(a)</option>
+                            <option value="viuvo">Viúvo(a)</option>
+                            <option value="outro">Outro</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-gray-700">E-mail</label>
+                        <input type="email" id="email" name="email" required class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200">
+                    </div>
+                    <div>
+                        <label for="telefone" class="block text-sm font-medium text-gray-700">Telefone</label>
+                        <input type="tel" id="telefone" name="telefone" required class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200">
+                    </div>
+                </div>
+                
+                <!-- Botão de Envio -->
+                <div class="pt-4">
+                    <button type="submit" id="next-page-btn" class="w-full bg-indigo-600 text-white font-semibold py-3 px-4 rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
+                        Próximo
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Seção da Ficha Técnica (escondida por padrão) -->
+        <div id="ficha-tecnica-page" class="page-content hidden">
+             <!-- ... (O restante do conteúdo da Ficha Técnica, Orçamento e Contrato permanece o mesmo) ... -->
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 mb-6 text-center">Ficha Técnica do Projeto</h1>
+            <p class="text-gray-600 text-center mb-8">Informações detalhadas sobre o projeto.</p>
+            
+            <!-- Conteúdo da ficha técnica -->
+            <div class="space-y-6">
+
+                <!-- Detalhes do Projeto -->
+                <div>
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4 border-b-2 border-indigo-500 pb-2">Detalhes do Projeto</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="tipoProjeto" class="block text-sm font-medium text-gray-700">Nome do Projeto</label>
+                            <select id="tipoProjeto" name="tipoProjeto" required class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200">
+                                <option value="" disabled selected>Selecione o tipo de projeto</option>
+                                <option value="arquitetonicos">Projetos Arquitetônicos</option>
+                                <option value="interiores">Projetos de Interiores</option>
+                                <option value="outros">Outros</option>
+                            </select>
+                            <p id="tipoProjeto-error" class="mt-1 text-sm text-red-500 hidden">Este campo é obrigatório.</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Cliente</label>
+                            <p id="clienteNome" class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm">Nome do Cliente</p>
+                        </div>
+                        <div>
+                            <label for="dataInicio" class="block text-sm font-medium text-gray-700">Data de Início</label>
+                            <input type="date" id="dataInicio" name="dataInicio" required class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200" readonly>
+                        </div>
+                        <div>
+                            <label for="dataConclusao" class="block text-sm font-medium text-gray-700">Previsão de Conclusão</label>
+                            <input type="date" id="dataConclusao" name="dataConclusao" required class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200" readonly>
+                        </div>
+                    </div>
+
+                    <!-- Campos para medições totais do terreno -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+                        <div>
+                            <label for="areaTotal" class="block text-sm font-medium text-gray-700">Área Total do Projeto (m²)</label>
+                            <input type="number" id="areaTotal" name="areaTotal" required step="0.01" class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200">
+                            <p id="areaTotal-error" class="mt-1 text-sm text-red-500 hidden">Este campo é obrigatório.</p>
+                        </div>
+                        <div>
+                            <label for="larguraTerreno" class="block text-sm font-medium text-gray-700">Largura do Terreno (m)</label>
+                            <input type="number" id="larguraTerreno" name="larguraTerreno" required step="0.01" class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200">
+                        </div>
+                        <div>
+                            <label for="comprimentoTerreno" class="block text-sm font-medium text-gray-700">Comprimento do Terreno (m)</label>
+                            <input type="number" id="comprimentoTerreno" name="comprimentoTerreno" required step="0.01" class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Nova seção para detalhes de ocupação -->
+                <div class="mt-8">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4 border-b-2 border-indigo-500 pb-2">Detalhes de Ocupação</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="areaTotalOcupada" class="block text-sm font-medium text-gray-700">Área Total Ocupada (m²)</label>
+                            <input type="number" id="areaTotalOcupada" name="areaTotalOcupada" class="mt-1 block w-full px-4 py-2 border rounded-lg shadow-sm readonly-field focus:outline-none" readonly>
+                        </div>
+                        <div>
+                            <label for="areaRestante" class="block text-sm font-medium text-gray-700">Área Restante (m²)</label>
+                            <input type="number" id="areaRestante" name="areaRestante" class="mt-1 block w-full px-4 py-2 border rounded-lg shadow-sm readonly-field focus:outline-none" readonly>
+                        </div>
+                        <div>
+                            <label for="larguraOcupada" class="block text-sm font-medium text-gray-700">Largura Ocupada (m)</label>
+                            <input type="number" id="larguraOcupada" name="larguraOcupada" class="mt-1 block w-full px-4 py-2 border rounded-lg shadow-sm readonly-field focus:outline-none" readonly>
+                        </div>
+                        <div>
+                            <label for="comprimentoOcupado" class="block text-sm font-medium text-gray-700">Comprimento Ocupado (m)</label>
+                            <input type="number" id="comprimentoOcupado" name="comprimentoOcupado" class="mt-1 block w-full px-4 py-2 border rounded-lg shadow-sm readonly-field focus:outline-none" readonly>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Nova seção para detalhes de cômodos -->
+                <div class="mt-8">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4 border-b-2 border-indigo-500 pb-2">Detalhes dos Cômodos</h2>
+                    <div id="comodos-container" class="space-y-4">
+                        <!-- Os campos de cômodo serão adicionados aqui via JavaScript -->
+                    </div>
+                    <div class="flex flex-col sm:flex-row gap-4 mt-4">
+                        <button id="add-comodo-btn" class="w-full sm:w-auto px-6 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200">
+                            Adicionar Cômodo
+                        </button>
+                        <button id="add-orcamento-btn" class="w-full sm:w-auto px-6 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
+                            Adicionar para Orçamento
+                        </button>
+                        <button id="go-to-orcamento-btn" class="w-full sm:w-auto px-6 py-2 bg-gray-500 text-white font-semibold rounded-lg shadow-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-colors duration-200">
+                           Ir para Orçamento
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Campo de Localização com botão de busca -->
+                <div class="space-y-2 mt-8">
+                    <label for="localizacao" class="block text-sm font-medium text-gray-700">Buscar Localização no Google Maps</label>
+                    <div class="flex gap-4">
+                        <input type="text" id="localizacao" name="localizacao" class="flex-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200" placeholder="Digite o endereço ou local">
+                        <button id="buscarLocalizacao" class="px-6 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
+                            Buscar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Seção de Orçamento (escondida por padrão) -->
+        <div id="orcamento-page" class="page-content hidden">
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 mb-6 text-center">Orçamento do Projeto</h1>
+            <p class="text-gray-600 text-center mb-8">Gerencie os custos do projeto aqui.</p>
+
+            <div class="space-y-6">
+                <!-- Seção de Orçamento Geral -->
+                <div class="bg-indigo-50 p-6 rounded-lg shadow-inner">
+                    <h2 class="text-xl font-semibold text-indigo-800 mb-4">Orçamento Geral</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                        <div>
+                            <label for="orcamentoTotal" class="block text-sm font-medium text-indigo-700">Quanto pretende investir no seu projeto?</label>
+                            <input type="number" id="orcamentoTotal" name="orcamentoTotal" step="0.01" class="mt-1 block w-full px-4 py-2 bg-white border border-indigo-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200" placeholder="0.00" required>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-indigo-700">Orçamento Restante</p>
+                            <p id="orcamentoRestante" class="mt-1 text-2xl font-bold text-green-600">R$ 0,00</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Botão e seletor de parcelas do orçamento geral -->
+                    <div class="mt-6 flex flex-col sm:flex-row items-center gap-4">
+                         <button id="btn-parcelas-geral" class="w-full sm:w-auto px-6 py-3 bg-indigo-600 text-white font-semibold rounded-full shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
+                             Adicionar Parcelas
+                         </button>
+                         <button id="go-to-ficha-btn" class="w-full sm:w-auto px-6 py-3 bg-gray-400 text-white font-semibold rounded-full shadow-md hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-colors duration-200">
+                            Voltar para Ficha
+                        </button>
+                         <div id="parcelas-geral-container" class="w-full sm:w-auto hidden flex flex-col sm:flex-row items-end gap-4">
+                            <div>
+                                <label for="parcelas-geral-select" class="block text-sm font-medium text-indigo-700 mb-1 text-left">Parcelas</label>
+                                <select id="parcelas-geral-select" class="w-full px-4 py-2 text-lg text-gray-700 bg-gray-100 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors cursor-pointer" required>
+                                    <option value="" disabled selected>Selecione as parcelas</option>
+                                    <option value="1">1x</option>
+                                    <option value="2">2x</option>
+                                    <option value="3">3x</option>
+                                    <option value="4">4x</option>
+                                    <option value="5">5x</option>
+                                    <option value="6">6x</option>
+                                    <option value="7">7x</option>
+                                    <option value="8">8x</option>
+                                    <option value="9">9x</option>
+                                    <option value="10">10x</option>
+                                    <option value="11">11x</option>
+                                    <option value="12">12x</option>
+                                </select>
+                                <p id="parcelas-error" class="mt-1 text-sm text-red-500 hidden">Selecione as parcelas.</p>
+                            </div>
+                            <div>
+                               <label for="valor-parcela-input" class="block text-sm font-medium text-indigo-700 mb-1 text-left">Valor da Parcela (R$)</label>
+                               <input type="text" id="valor-parcela-input" class="w-full px-4 py-2 text-lg text-gray-700 bg-gray-200 border border-gray-300 rounded-lg focus:outline-none readonly-field" readonly placeholder="R$ 0,00">
+                            </div>
+                         </div>
+                    </div>
+                </div>
+
+                <!-- Seção de Itens de Custo -->
+                <div class="mt-8">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4 border-b-2 border-indigo-500 pb-2">Itens de Custo</h2>
+                    <div id="custos-container" class="space-y-4">
+                        <!-- Itens de custo serão adicionados aqui via JavaScript -->
+                    </div>
+                    <div class="flex items-center justify-between mt-6 flex-wrap gap-4">
+                        <p id="custo-total" class="text-xl font-semibold text-gray-800">
+                            Total Gasto: <span id="totalGasto" class="text-red-600">R$ 0,00</span>
+                        </p>
+                        <button id="btn-enviar-proposta" class="px-6 py-3 bg-green-600 text-white font-semibold rounded-full shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200">
+                            Enviar Proposta
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Seção de Pagamento (nova, escondida por padrão) -->
+        <div id="pagamento-page" class="page-content hidden">
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 mb-6 text-center">Pagamento do Projeto</h1>
+            <div class="space-y-6">
+                <!-- Resumo do Pagamento -->
+                <div class="bg-indigo-50 p-6 rounded-lg shadow-inner">
+                    <h2 class="text-xl font-semibold text-indigo-800 mb-4">Resumo do Pagamento</h2>
+                    <div id="resumo-pagamento" class="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+                        <!-- Conteúdo será preenchido por JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Detalhes do Pagamento -->
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Pagar com Cartão de Crédito</h2>
+                    <form id="payment-form" class="space-y-4">
+                        <div>
+                            <label for="card-number" class="block text-sm font-medium text-gray-700">Número do Cartão</label>
+                            <input type="text" id="card-number" name="card-number" required class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="0000 0000 0000 0000">
+                        </div>
+                        <div>
+                            <label for="card-name" class="block text-sm font-medium text-gray-700">Nome no Cartão</label>
+                            <input type="text" id="card-name" name="card-name" required class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="card-expiry" class="block text-sm font-medium text-gray-700">Data de Expiração</label>
+                                <input type="text" id="card-expiry" name="card-expiry" required class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="MM/AA">
+                            </div>
+                            <div>
+                                <label for="card-cvv" class="block text-sm font-medium text-gray-700">CVV</label>
+                                <input type="text" id="card-cvv" name="card-cvv" required class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="123">
+                            </div>
+                        </div>
+                        <div class="pt-4">
+                            <button type="submit" id="btn-finalizar-pagamento" class="w-full bg-green-600 text-white font-semibold py-3 px-4 rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200">
+                                Finalizar Pagamento
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Seção para o QR Code -->
+                <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Gerar QR Code para Pagamento</h2>
+                    <button id="gerar-qrcode-btn" class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-full shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
+                        Gerar QR Code
+                    </button>
+                    <div id="qrcode-container" class="mt-6 flex justify-center">
+                        <!-- O QR Code será injetado aqui -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Seção de Contrato (escondida por padrão) -->
+        <div id="contrato-page" class="page-content hidden">
+            <div id="printable-contract">
+                <h1 class="text-xl sm:text-2xl font-bold text-gray-800 mb-4 text-center">CONTRATO DE PRESTAÇÃO DE SERVIÇOS DE ARQUITETURA</h1>
+                <div class="p-4 sm:p-6 bg-gray-50 rounded-lg shadow-inner max-h-[500px] overflow-y-auto mb-6">
+                    <div id="contrato-content" class="text-sm text-gray-700 leading-relaxed space-y-4">
+                        <!-- O conteúdo do contrato será injetado aqui pelo JavaScript -->
+                    </div>
+                </div>
+                
+                <div class="flex flex-col md:flex-row gap-8 mt-12 pt-8 justify-around">
+                    <!-- Assinatura do Contratante -->
+                    <div class="w-full md:w-2/5 text-center">
+                        <p class="border-b border-gray-600 pb-2"></p>
+                        <p id="assinatura-contratante-nome" class="font-semibold mt-1">[Nome do Cliente]</p>
+                        <p class="text-sm">(Contratante)</p>
+                    </div>
+            
+                    <!-- Assinatura da Contratada -->
+                    <div class="w-full md:w-2/5 text-center">
+                        <p class="border-b border-gray-600 pb-2"></p>
+                        <p class="font-semibold mt-1">Wellington Rodrigues Dos Santos</p>
+                        <p class="text-sm">(Contratada)</p>
+                    </div>
+                </div>
+
+                 <div class="mt-6 border-t pt-4">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-2 text-center">TESTEMUNHAS</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
+                        <div class="border-t border-gray-400 pt-1">
+                            <p>1. _________________________</p>
+                            <p>Nome:</p>
+                            <p>CPF:</p>
+                        </div>
+                        <div class="border-t border-gray-400 pt-1">
+                            <p>2. _________________________</p>
+                            <p>Nome:</p>
+                            <p>CPF:</p>
+                        </pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-6 text-center">
+                <button id="gerar-contrato-pdf-main" class="px-6 py-3 text-base sm:text-lg bg-indigo-600 text-white font-bold rounded-lg shadow-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
+                    Gerar PDF do Contrato
+                </button>
+            </div>
+        </div>
+        
+        <!-- Nova seção de Colaborador (escondida por padrão) -->
+        <div id="colaborador-page" class="page-content hidden">
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 mb-6 text-center">Área do Colaborador</h1>
+            
+            <div class="mb-12">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center border-b-2 pb-2">Gerenciamento do Contrato</h2>
+                <p class="text-gray-600 text-center mb-8">Edite as cláusulas e campos do contrato abaixo. As alterações serão refletidas na aba "Contrato".</p>
+                
+                <form id="clausulas-form" class="space-y-6">
+                    <div>
+                        <label for="clausula-1" class="block text-sm font-medium text-gray-700">CLÁUSULA PRIMEIRA – DO OBJETO DO CONTRATO</label>
+                        <textarea id="clausula-1" name="clausula-1" rows="3" class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                    </div>
+                    <div>
+                        <label for="clausula-2" class="block text-sm font-medium text-gray-700">CLÁUSULA SEGUNDA – DAS OBRIGAÇÕES DA CONTRATADA</label>
+                        <textarea id="clausula-2" name="clausula-2" rows="5" class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                    </div>
+                    <div>
+                        <label for="clausula-3" class="block text-sm font-medium text-gray-700">CLÁUSULA TERCEIRA – DAS OBRIGAÇÕES DO CONTRATANTE</label>
+                        <textarea id="clausula-3" name="clausula-3" rows="5" class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                    </div>
+                     <div>
+                        <label for="clausula-4" class="block text-sm font-medium text-gray-700">CLÁUSULA QUARTA – DO CRONOGRAMA E PRAZOS</label>
+                        <textarea id="clausula-4" name="clausula-4" rows="4" class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                    </div>
+                     <div>
+                        <label for="clausula-5" class="block text-sm font-medium text-gray-700">CLÁUSULA QUINTA – DA REMUNERAÇÃO E FORMA DE PAGAMENTO</label>
+                        <textarea id="clausula-5" name="clausula-5" rows="5" class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                    </div>
+                    <div>
+                        <label for="clausula-6" class="block text-sm font-medium text-gray-700">CLÁUSULA SEXTA – DA RESCISÃO DO CONTRATO</label>
+                        <textarea id="clausula-6" name="clausula-6" rows="5" class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                    </div>
+                    <div>
+                        <label for="clausula-7" class="block text-sm font-medium text-gray-700">CLÁUSULA SÉTIMA – DA PROPRIEDADE INTELECTUAL</label>
+                        <textarea id="clausula-7" name="clausula-7" rows="3" class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                    </div>
+                    <div>
+                        <label for="clausula-8" class="block text-sm font-medium text-gray-700">CLÁUSULA OITAVA – DO FORO</label>
+                        <textarea id="clausula-8" name="clausula-8" rows="2" class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                    </div>
+                    
+                    <!-- Container para cláusulas adicionais -->
+                    <div id="novas-clausulas-container" class="space-y-6"></div>
+
+                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+                        <button type="submit" class="w-full bg-indigo-600 text-white font-semibold py-3 px-4 rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
+                            Salvar Alterações no Contrato
+                        </button>
+                        <button type="button" id="add-clausula-btn" class="w-full bg-green-600 text-white font-semibold py-3 px-4 rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200">
+                            Adicionar Nova Cláusula
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Seção de Gerenciamento de Custos -->
+            <div class="mt-12 pt-8 border-t-2 border-gray-200">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">Gerenciamento de Custos</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-start mb-6 text-center">
+                    <div>
+                        <label for="custoM2" class="block text-sm font-medium text-gray-700">Custo por Metro Quadrado (R$)</label>
+                        <input type="number" id="custoM2" name="custoM2" value="35.00" step="0.01" class="mt-1 block w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200" placeholder="0.00">
+                        <button id="salvar-custo-m2" class="mt-4 w-full bg-green-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200">
+                            Salvar Custo
+                        </button>
+                    </div>
+                     <!-- Novos campos de desconto e acréscimo -->
+                    <div>
+                        <label for="desconto" class="block text-sm font-medium text-gray-700">Desconto (%)</label>
+                        <input type="number" id="desconto" name="desconto" value="0.00" step="0.01" min="0" max="100" class="mt-1 block w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200" placeholder="0.00">
+                        <button id="salvar-desconto" class="mt-4 w-full bg-green-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200">
+                            Salvar Desconto
+                        </button>
+                    </div>
+                    <div>
+                        <label for="acrescimo" class="block text-sm font-medium text-gray-700">Acréscimo (%)</label>
+                        <input type="number" id="acrescimo" name="acrescimo" value="0.00" step="0.01" min="0" class="mt-1 block w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200" placeholder="0.00">
+                        <button id="salvar-acrescimo" class="mt-4 w-full bg-green-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200">
+                            Salvar Acréscimo
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NOVA SEÇÃO: Configuração do Banco de Dados -->
+            <div class="mt-12 pt-8 border-t-2 border-gray-200">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">Configuração do Banco de Dados (Firebase)</h2>
+                <div class="max-w-md mx-auto text-center">
+                    <p class="text-gray-600 mb-4">Para que os dados sejam guardados permanentemente no seu site (ex: Wix), precisa de conectar a sua própria base de dados Firebase.</p>
+                    <button id="config-firebase-btn" class="w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
+                        Configurar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Alerta -->
+    <div id="warning-modal" class="modal">
+        <div class="modal-content">
+            <h3 class="text-2xl font-bold text-red-600 mb-4">Aviso de Orçamento!</h3>
+            <p id="modal-message" class="text-gray-700 mb-6">O orçamento restante é negativo. Isso significa que os custos atuais excedem o orçamento total do projeto.</p>
+            <button id="close-modal-btn" class="px-6 py-2 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200">
+                Entendido
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmação -->
+    <div id="success-modal" class="modal">
+        <div class="modal-content">
+            <h3 class="text-2xl font-bold text-green-600 mb-4">Sucesso!</h3>
+            <p id="success-modal-message" class="text-gray-700 mb-6">Sua alteração foi salva com sucesso.</p>
+            <button id="close-success-modal-btn" class="px-6 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200">
+                OK
+            </button>
+        </div>
+    </div>
+
+     <!-- Modal de Resumo da Proposta -->
+    <div id="resumo-modal" class="modal">
+        <div class="proposal-modal-content">
+            <div id="resumo-content">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">Resumo da Proposta</h2>
+                <div id="resumo-body" class="text-left space-y-4 max-h-[80vh] overflow-y-auto p-4 bg-gray-50 rounded">
+                    <!-- Conteúdo do resumo será injetado aqui -->
+                </div>
+                <div class="mt-6 flex flex-wrap justify-end gap-4">
+                    <button id="btn-baixar-resumo-pdf" class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Baixar Resumo (PDF)</button>
+                    <button id="btn-baixar-contrato-pdf" class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Baixar Contrato (PDF)</button>
+                    <button id="btn-contratar" class="px-6 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">Contratar e Enviar</button>
+                    <button id="close-resumo-modal-btn" class="px-6 py-2 bg-gray-300 text-gray-800 font-semibold rounded-lg shadow-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400">Fechar</button>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+    
+    <!-- Modal de Senha do Colaborador -->
+    <div id="password-modal" class="modal">
+        <div class="modal-content">
+            <h3 class="text-2xl font-bold text-gray-800 mb-4">Acesso Restrito</h3>
+            <p class="text-gray-600 mb-6">Por favor, insira a senha para aceder à área do colaborador.</p>
+            <form id="password-form">
+                <input type="password" id="password-input" class="block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="Senha">
+                <p id="password-error" class="text-red-500 text-sm mt-2 hidden">Senha incorreta.</p>
+                <div class="mt-6 flex gap-4">
+                     <button type="button" id="close-password-modal-btn" class="w-1/2 px-6 py-2 bg-gray-300 text-gray-800 font-semibold rounded-lg shadow-md hover:bg-gray-400">Cancelar</button>
+                    <button type="submit" class="w-1/2 px-6 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700">Entrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal de Configuração do Firebase -->
+    <div id="firebase-config-modal" class="modal">
+        <div class="modal-content-lg text-left">
+            <h3 class="text-2xl font-bold text-gray-800 mb-4 text-center">Configurar Base de Dados</h3>
+            <p class="text-gray-600 mb-6 text-center">Para guardar os dados permanentemente, precisa de seguir estes 4 passos:</p>
+            <form id="firebase-config-form">
+                <div class="space-y-4 text-sm">
+                    <p><strong>1. Crie um Projeto Firebase:</strong> Aceda ao <a href="https://console.firebase.google.com/" target="_blank" class="text-blue-600 hover:underline font-semibold">seu painel do Firebase</a> e crie um novo projeto (se ainda não tiver um).</p>
+                    <p><strong>2. Ative a Autenticação Anónima:</strong> No seu projeto, vá para <strong>Authentication</strong> > <strong>Sign-in method</strong> e ative o provedor <strong>Anonymous</strong>.</p>
+                    <p><strong>3. Configure as Regras da Base de Dados:</strong> Vá para <strong>Firestore Database</strong> > <strong>Rules</strong> e substitua o conteúdo pelas seguintes regras e publique:</p>
+                    <pre class="bg-gray-100 p-2 rounded text-xs overflow-x-auto"><code>rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /artifacts/{appId}/users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}</code></pre>
+                    <p><strong>4. Obtenha e Cole a Configuração:</strong> Vá para <strong>Project Settings</strong> (ícone de engrenagem) > <strong>General</strong>. Na secção "Your apps", clique no ícone da Web (<strong>&lt;/&gt;</strong>) e copie o objeto <code>firebaseConfig</code> para a caixa abaixo.</p>
+                    <div>
+                        <label for="firebase-config-input" class="block text-sm font-medium text-gray-700">Cole o objeto de configuração do Firebase aqui:</label>
+                        <textarea id="firebase-config-input" rows="8" class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm" placeholder='const firebaseConfig = {\n  apiKey: "AIza...",\n  authDomain: "...",\n  ...\n};'></textarea>
+                        <p id="config-error" class="text-red-500 text-sm mt-2 hidden">Configuração inválida. Por favor, cole o objeto JavaScript completo.</p>
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-end gap-4">
+                    <button type="button" id="close-config-modal-btn" class="px-6 py-2 bg-gray-300 text-gray-800 font-semibold rounded-lg shadow-md hover:bg-gray-400">Cancelar</button>
+                    <button type="submit" class="px-6 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700">Guardar Configuração</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- Script para navegação, cálculos e integração com Firebase -->
+    <script type="module">
+        // Importa os serviços do Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, setDoc, doc, onSnapshot, setLogLevel, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Lógica do Menu de Navegação Móvel ---
+        const menuToggle = document.getElementById('menu-toggle');
+        const menuLinks = document.getElementById('menu-links');
+
+        menuToggle.addEventListener('click', () => {
+            menuLinks.classList.toggle('hidden');
+        });
+
+        // Adiciona um listener para fechar o menu ao clicar num link
+        menuLinks.addEventListener('click', (event) => {
+            // Verifica se o clique foi num botão e se a tela é de telemóvel (menor que o breakpoint 'sm' do Tailwind)
+            if (event.target.tagName === 'BUTTON' && window.innerWidth < 640) { 
+                menuLinks.classList.add('hidden');
+            }
+        });
+
+        // --- Variáveis Globais de Aplicação ---
+        let app, db, auth;
+        const dbStatusIndicator = document.getElementById('db-status-indicator');
+        const FIREBASE_CONFIG_KEY = 'my_app_firebase_config';
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        let warningShown = false;
+
+
+        // --- Funções de Inicialização ---
+
+        function updateDbStatus(isConnected, message) {
+            const span = dbStatusIndicator.querySelector('span:first-child');
+            const text = dbStatusIndicator.querySelector('span:last-child');
+            
+            if (isConnected) {
+                dbStatusIndicator.classList.remove('bg-red-100', 'text-red-800');
+                dbStatusIndicator.classList.add('bg-green-100', 'text-green-800');
+                span.classList.remove('bg-red-500');
+                span.classList.add('bg-green-500');
+                text.textContent = message || 'Conectado';
+            } else {
+                dbStatusIndicator.classList.remove('bg-green-100', 'text-green-800');
+                dbStatusIndicator.classList.add('bg-red-100', 'text-red-800');
+                span.classList.remove('bg-green-500');
+                span.classList.add('bg-red-500');
+                text.textContent = message || 'Não Configurado';
+            }
+        }
+        
+        async function initializeFirebase(config, token) {
+            try {
+                if (!config || Object.keys(config).length === 0) {
+                    updateDbStatus(false, "Não Configurado");
+                    console.warn("Firebase não configurado.");
+                    return false;
+                }
+
+                app = initializeApp(config);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                if (token) {
+                    await signInWithCustomToken(auth, token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        console.log("Usuário autenticado com sucesso:", user.uid);
+                        updateDbStatus(true, "Conectado");
+                        loadAndSyncConfiguration(user.uid);
+                    } else {
+                         updateDbStatus(false, "Falha na Autenticação");
+                    }
+                });
+                return true;
+            } catch (error) {
+                console.error("Erro ao inicializar Firebase:", error);
+                let errorMessage = "Erro de Config.";
+                if (error.code === 'auth/operation-not-allowed') {
+                    errorMessage = "Auth Desativada";
+                } else if (error.message && error.message.includes("API key not valid")) {
+                    errorMessage = "Chave de API inválida.";
+                }
+                updateDbStatus(false, errorMessage);
+                return false;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const storedConfigStr = localStorage.getItem(FIREBASE_CONFIG_KEY);
+            const injectedConfigStr = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
+            const injectedToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+            let configToUse = null;
+            let tokenToUse = injectedToken;
+            
+            try {
+                if (storedConfigStr) {
+                    configToUse = JSON.parse(storedConfigStr);
+                    tokenToUse = null; // Quando a config é do utilizador, autenticamos anonimamente.
+                } else if (injectedConfigStr) {
+                    configToUse = JSON.parse(injectedConfigStr);
+                }
+            } catch (e) {
+                console.error("Erro ao analisar a configuração JSON.", e);
+            }
+            
+            initializeFirebase(configToUse, tokenToUse);
+        });
+        
+        // --- Funções Auxiliares de Formatação ---
+        function formatCurrency(value) {
+            if (isNaN(value)) value = 0;
+            // Formata para o padrão BRL (ex: R$ 1.234,56)
+            return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }).replace('R$\xa0', 'R$ ');
+        }
+
+        function parseCurrency(value) {
+            if (typeof value !== 'string') return parseFloat(value) || 0;
+            // Converte o formato BRL para um número float (ex: 'R$ 1.234,56' -> 1234.56)
+            const number = parseFloat(
+                value.replace('R$', '')
+                     .trim()
+                     .replace(/\./g, '')
+                     .replace(',', '.')
+            );
+            return isNaN(number) ? 0 : number;
+        }
+
+        // Variáveis de página e botões
+        const cadastroPage = document.getElementById('cadastro-page');
+        const fichaTecnicaPage = document.getElementById('ficha-tecnica-page');
+        const orcamentoPage = document.getElementById('orcamento-page');
+        const pagamentoPage = document.getElementById('pagamento-page');
+        const contratoPage = document.getElementById('contrato-page');
+        const colaboradorPage = document.getElementById('colaborador-page');
+        const btnCadastro = document.getElementById('btn-cadastro');
+        const btnFichaTecnica = document.getElementById('btn-ficha-tecnica');
+        const btnOrcamento = document.getElementById('btn-orcamento');
+        const btnPagamento = document.getElementById('btn-pagamento');
+        const btnContrato = document.getElementById('btn-contrato');
+        const btnColaborador = document.getElementById('btn-colaborador');
+        const goToOrcamentoBtn = document.getElementById('go-to-orcamento-btn');
+        const goToFichaBtn = document.getElementById('go-to-ficha-btn');
+        
+        // Variável para controlar qual página será exibida após a senha
+        let targetPageAfterPassword = null;
+
+        // Objeto para armazenar cláusulas personalizadas
+        let clausulasPersonalizadas = {
+            clausula1: null, clausula2: null, clausula3: null, clausula4: null,
+            clausula5: null, clausula6: null, clausula7: null, clausula8: null,
+            novas: []
+        };
+
+        // Campos de nome do formulário de cadastro
+        const nomeInput = document.getElementById('nome');
+        const sobrenomeInput = document.getElementById('sobrenome');
+
+        // Campo de nome do cliente na ficha técnica
+        const clienteNomeElement = document.getElementById('clienteNome');
+
+        // Modal de aviso
+        const warningModal = document.getElementById('warning-modal');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        
+        // Modal de sucesso
+        const successModal = document.getElementById('success-modal');
+        const successModalMessage = document.getElementById('success-modal-message');
+        const closeSuccessModalBtn = document.getElementById('close-success-modal-btn');
+
+        // Modal de Senha
+        const passwordModal = document.getElementById('password-modal');
+        const passwordForm = document.getElementById('password-form');
+        const passwordInput = document.getElementById('password-input');
+        const passwordError = document.getElementById('password-error');
+        const closePasswordModalBtn = document.getElementById('close-password-modal-btn');
+
+        closeModalBtn.addEventListener('click', () => {
+            warningModal.style.display = 'none';
+            // Reseta a flag para permitir que a próxima tentativa de orçamento mostre o aviso
+            warningShown = false;
+        });
+
+        closeSuccessModalBtn.addEventListener('click', () => {
+            successModal.style.display = 'none';
+        });
+
+        closePasswordModalBtn.addEventListener('click', () => {
+            passwordModal.style.display = 'none';
+            targetPageAfterPassword = null; // Limpa o alvo se o modal for fechado
+        });
+
+        // Função para alternar a visibilidade das páginas
+        function showPage(pageId) {
+            cadastroPage.classList.add('hidden');
+            fichaTecnicaPage.classList.add('hidden');
+            orcamentoPage.classList.add('hidden');
+            pagamentoPage.classList.add('hidden');
+            contratoPage.classList.add('hidden');
+            colaboradorPage.classList.add('hidden');
+            document.getElementById(pageId).classList.remove('hidden');
+
+            // Lógica para esconder/mostrar o indicador de status da base de dados
+            if (pageId === 'colaborador-page') {
+                dbStatusIndicator.classList.remove('hidden');
+            } else {
+                dbStatusIndicator.classList.add('hidden');
+            }
+
+            // Atualiza o estilo dos botões de navegação
+            const allButtons = [btnCadastro, btnFichaTecnica, btnOrcamento, btnPagamento, btnContrato, btnColaborador];
+            allButtons.forEach(btn => {
+                btn.classList.remove('bg-indigo-600', 'text-white');
+                btn.classList.add('bg-gray-200', 'text-gray-700');
+            });
+
+            let activeBtn;
+            if (pageId === 'cadastro-page') activeBtn = btnCadastro;
+            else if (pageId === 'ficha-tecnica-page') activeBtn = btnFichaTecnica;
+            else if (pageId === 'orcamento-page') activeBtn = btnOrcamento;
+            else if (pageId === 'pagamento-page') {
+                activeBtn = btnPagamento;
+                populatePagamentoPage(); // Chama a função para popular a página de pagamento
+            }
+            else if (pageId === 'contrato-page') {
+                activeBtn = btnContrato;
+                updateContratoContent();
+            } else if (pageId === 'colaborador-page') {
+                activeBtn = btnColaborador;
+                populateClausulasEditor();
+            }
+            
+            if (activeBtn) {
+                activeBtn.classList.add('bg-indigo-600', 'text-white');
+                activeBtn.classList.remove('bg-gray-200', 'text-gray-700');
+            }
+        }
+
+        // Adiciona listeners aos botões de navegação
+        btnCadastro.addEventListener('click', () => showPage('cadastro-page'));
+        btnFichaTecnica.addEventListener('click', () => showPage('ficha-tecnica-page'));
+        btnOrcamento.addEventListener('click', () => showPage('orcamento-page'));
+        btnPagamento.addEventListener('click', () => showPage('pagamento-page'));
+        
+        btnContrato.addEventListener('click', () => {
+            targetPageAfterPassword = 'contrato-page';
+            passwordInput.value = '';
+            passwordError.classList.add('hidden');
+            passwordModal.style.display = 'flex';
+        });
+        
+        btnColaborador.addEventListener('click', () => {
+            targetPageAfterPassword = 'colaborador-page';
+            passwordInput.value = '';
+            passwordError.classList.add('hidden');
+            passwordModal.style.display = 'flex';
+        });
+
+        passwordForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (passwordInput.value === 'Santos10') {
+                passwordModal.style.display = 'none';
+                if (targetPageAfterPassword) {
+                    showPage(targetPageAfterPassword);
+                    targetPageAfterPassword = null; // Limpa o alvo após o sucesso
+                }
+            } else {
+                passwordError.classList.remove('hidden');
+            }
+        });
+
+        goToOrcamentoBtn.addEventListener('click', () => showPage('orcamento-page'));
+        goToFichaBtn.addEventListener('click', () => showPage('ficha-tecnica-page'));
+        
+        // --- Lógica para salvar os dados do cadastro no Firebase ---
+        const cadastroForm = document.getElementById('cadastro-form');
+        cadastroForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            // A base de dados é exigida para salvar, mas não para a navegação.
+            if (auth && auth.currentUser) {
+                 const currentUserId = auth.currentUser.uid;
+            
+                // Coleta os dados do formulário
+                const formData = new FormData(cadastroForm);
+                const customerData = {};
+
+                // Processa todos os campos, exceto os ficheiros
+                for (const [key, value] of formData.entries()) {
+                    if (key !== 'arquivos') {
+                        customerData[key] = value;
+                    }
+                }
+
+                // Processa os ficheiros separadamente para armazenar apenas os nomes
+                const files = formData.getAll('arquivos');
+                if (files && files.length > 0) {
+                    customerData.arquivos = files.map(file => file.name).filter(name => name);
+                } else {
+                    customerData.arquivos = [];
+                }
+
+                console.log("Salvando os seguintes dados para o usuário", currentUserId, ":", customerData);
+
+                try {
+                    const customersCollectionRef = collection(db, 'artifacts', appId, 'users', currentUserId, 'customers');
+                    const docRef = await addDoc(customersCollectionRef, customerData);
+                    
+                    console.log("Cliente cadastrado com o ID: ", docRef.id);
+                    // O alerta foi removido para uma experiência mais fluida
+                } catch (e) {
+                    console.error("Erro ao adicionar o documento: ", e);
+                    alert('Ocorreu um erro ao salvar os dados. Verifique a consola para mais detalhes.');
+                }
+            } else {
+                 alert('Base de dados não conectada. Por favor, configure na aba "Colaborador" antes de guardar dados.');
+            }
+
+            // Sempre avança para a próxima página após o clique
+            showPage('ficha-tecnica-page');
+        });
+
+
+        // --- O restante do seu código JavaScript (CEP, datas, cálculos, etc.) permanece aqui ---
+         // Script para preenchimento automático do CEP
+        const cepInput = document.getElementById('cep');
+        const enderecoInput = document.getElementById('endereco');
+        const bairroInput = document.getElementById('bairro');
+        const cidadeInput = document.getElementById('cidade');
+        const estadoSelect = document.getElementById('estado');
+        const cepMessage = document.getElementById('cep-message');
+
+        cepInput.addEventListener('blur', async () => {
+            let cep = cepInput.value.replace(/\D/g, '');
+
+            enderecoInput.value = '';
+            bairroInput.value = '';
+            cidadeInput.value = '';
+            cepMessage.classList.add('hidden');
+
+            if (cep.length === 8) {
+                try {
+                    const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+                    const data = await response.json();
+
+                    if (!data.erro) {
+                        enderecoInput.value = data.logouro;
+                        bairroInput.value = data.bairro;
+                        cidadeInput.value = data.localidade;
+                        
+                        const estadoOption = [...estadoSelect.options].find(option => option.value === data.uf);
+                        if (estadoOption) {
+                            estadoSelect.value = data.uf;
+                        }
+
+                    } else {
+                        cepMessage.textContent = 'CEP não encontrado.';
+                        cepMessage.classList.remove('hidden');
+                    }
+                } catch (error) {
+                    cepMessage.textContent = 'Erro ao buscar o CEP. Tente novamente.';
+                    cepMessage.classList.add('hidden');
+                }
+            } else if (cep.length > 0) {
+                cepMessage.textContent = 'O CEP deve conter 8 dígitos.';
+                cepMessage.classList.remove('hidden');
+            }
+        });
+
+        // Script para preencher as datas automaticamente
+        document.addEventListener('DOMContentLoaded', () => {
+            const dataInicioInput = document.getElementById('dataInicio');
+            const dataConclusaoInput = document.getElementById('dataConclusao');
+
+            // Função para calcular a data de conclusão
+            function calcularDataConclusao(dataInicio) {
+                const date = new Date(dataInicio);
+                date.setDate(date.getDate() + 30);
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+
+            // Preenche a data de início com a data de hoje
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            const todayStr = `${year}-${month}-${day}`;
+            dataInicioInput.value = todayStr;
+
+            // Preenche a data de conclusão com 30 dias a mais
+            dataConclusaoInput.value = calcularDataConclusao(todayStr);
+
+            // Adiciona um listener para atualizar a data de conclusão se a data de início for alterada
+            dataInicioInput.addEventListener('change', (event) => {
+                dataConclusaoInput.value = calcularDataConclusao(event.target.value);
+            });
+
+        });
+        
+        // --- Atualização de nome do cliente em tempo real ---
+        
+        // Função para atualizar o nome do cliente na ficha técnica
+        function atualizarNomeCliente() {
+            const nomeCompleto = `${nomeInput.value} ${sobrenomeInput.value}`.trim();
+            clienteNomeElement.textContent = nomeCompleto || 'Nome do Cliente';
+            document.getElementById('assinatura-contratante-nome').textContent = nomeCompleto || '[Nome do Cliente]';
+        }
+
+        // Adiciona listeners para os campos de nome e sobrenome
+        nomeInput.addEventListener('input', atualizarNomeCliente);
+        sobrenomeInput.addEventListener('input', atualizarNomeCliente);
+        
+        // Chama a função uma vez ao carregar a página, caso os campos já tenham algum valor
+        document.addEventListener('DOMContentLoaded', atualizarNomeCliente);
+
+        // --- Lógica do botão de busca de localização no Google Maps ---
+        const localizacaoInput = document.getElementById('localizacao');
+        const buscarLocalizacaoBtn = document.getElementById('buscarLocalizacao');
+
+        buscarLocalizacaoBtn.addEventListener('click', () => {
+            const local = localizacaoInput.value.trim();
+            if (local) {
+                // Constrói a URL para a busca no Google Maps e abre em uma nova aba
+                const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(local)}`;
+                window.open(url, '_blank');
+            }
+        });
+
+        // --- Lógica para adicionar e remover cômodos dinamicamente e adicionar campo "Outro" ---
+        const addComodoBtn = document.getElementById('add-comodo-btn');
+        const comodosContainer = document.getElementById('comodos-container');
+        
+        addComodoBtn.addEventListener('click', () => {
+            const comodoDiv = document.createElement('div');
+            comodoDiv.className = 'comodo-group grid grid-cols-1 md:grid-cols-4 gap-6 p-4 border rounded-lg bg-gray-50 relative';
+            comodoDiv.innerHTML = `
+                <button type="button" class="remove-comodo-btn absolute top-2 right-2 text-red-500 hover:text-red-700 transition-colors duration-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </button>
+                <div>
+                    <label for="tipoComodo" class="block text-sm font-medium text-gray-700">Tipo de Cômodo</label>
+                    <select name="tipoComodo" required class="mt-1 block w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200">
+                        <option value="" disabled selected>Selecione</option>
+                        <option value="quarto">Quarto</option>
+                        <option value="cozinha">Cozinha</option>
+                        <option value="banheiro">Banheiro</option>
+                        <option value="sala_estar">Sala de Estar</option>
+                        <option value="sala_jantar">Sala de Jantar</option>
+                        <option value="escritorio">Escritório</option>
+                        <option value="lavanderia">Lavanderia</option>
+                        <option value="garagem">Garagem</option>
+                        <option value="outro">Outro</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="quantidadeComodo" class="block text-sm font-medium text-gray-700">Quantidade</label>
+                    <input type="number" name="quantidadeComodo" required class="mt-1 block w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200" min="1" value="1">
+                </div>
+                <div>
+                    <label for="larguraComodo" class="block text-sm font-medium text-gray-700">Largura (m)</label>
+                    <input type="number" name="larguraComodo" required class="mt-1 block w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200" min="0" step="0.01">
+                </div>
+                <div>
+                    <label for="comprimentoComodo" class="block text-sm font-medium text-gray-700">Comprimento (m)</label>
+                    <input type="number" name="comprimentoComodo" required class="mt-1 block w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200" min="0" step="0.01">
+                </div>
+            `;
+            comodosContainer.appendChild(comodoDiv);
+
+            // Adiciona o listener para o botão de remover recém-criado
+            comodoDiv.querySelector('.remove-comodo-btn').addEventListener('click', (event) => {
+                event.currentTarget.closest('.comodo-group').remove();
+                calcularOcupacao();
+            });
+
+            // Adiciona um listener de mudança para o select de tipo de cômodo
+            comodoDiv.querySelector('select[name="tipoComodo"]').addEventListener('change', (event) => {
+                const selectElement = event.target;
+                const parentDiv = selectElement.closest('.comodo-group');
+                const existingOutroInput = parentDiv.querySelector('.outro-input-group');
+
+                if (selectElement.value === 'outro') {
+                    if (!existingOutroInput) {
+                        const outroInputGroup = document.createElement('div');
+                        outroInputGroup.className = 'col-span-1 md:col-span-2 outro-input-group';
+                        outroInputGroup.innerHTML = `
+                            <label for="outroComodoNome" class="block text-sm font-medium text-gray-700">Nome do Cômodo</label>
+                            <input type="text" name="outroComodoNome" class="mt-1 block w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200" placeholder="Ex: Escritório de Leitura" required>
+                        `;
+                        parentDiv.appendChild(outroInputGroup);
+                    }
+                } else {
+                    if (existingOutroInput) {
+                        existingOutroInput.remove();
+                    }
+                }
+            });
+            calcularOcupacao();
+        });
+
+        // --- Lógica de cálculo de ocupação ---
+        const areaTotalInput = document.getElementById('areaTotal');
+        const areaTotalOcupadaInput = document.getElementById('areaTotalOcupada');
+        const areaRestanteInput = document.getElementById('areaRestante');
+        const larguraOcupadaInput = document.getElementById('larguraOcupada');
+        const comprimentoOcupadoInput = document.getElementById('comprimentoOcupado');
+
+        function calcularOcupacao() {
+            let areaOcupada = 0;
+            let larguraOcupadaTotal = 0;
+            let comprimentoOcupadoTotal = 0;
+
+            // Pega todos os grupos de campos de cômodos
+            const comodos = comodosContainer.querySelectorAll('.comodo-group');
+
+            comodos.forEach(comodo => {
+                const quantidade = parseFloat(comodo.querySelector('[name="quantidadeComodo"]').value) || 0;
+                const largura = parseFloat(comodo.querySelector('[name="larguraComodo"]').value) || 0;
+                const comprimento = parseFloat(comodo.querySelector('[name="comprimentoComodo"]').value) || 0;
+
+                areaOcupada += (quantidade * largura * comprimento);
+                larguraOcupadaTotal += (quantidade * largura);
+                comprimentoOcupadoTotal += (quantidade * comprimento);
+            });
+
+            const areaTotalProjeto = parseFloat(areaTotalInput.value) || 0;
+            const areaRestante = areaTotalProjeto - areaOcupada;
+
+            areaTotalOcupadaInput.value = areaOcupada.toFixed(2);
+            areaRestanteInput.value = areaRestante.toFixed(2);
+            larguraOcupadaInput.value = larguraOcupadaTotal.toFixed(2);
+            comprimentoOcupadoInput.value = comprimentoOcupadoTotal.toFixed(2);
+        }
+
+        // Event listeners para recalcular quando os valores mudam
+        areaTotalInput.addEventListener('input', calcularOcupacao);
+        comodosContainer.addEventListener('input', (event) => {
+            const target = event.target;
+            // Recalcula se o input modificado é um campo de cômodo
+            if (target.name === 'quantidadeComodo' || target.name === 'larguraComodo' || target.name === 'comprimentoComodo') {
+                calcularOcupacao();
+            }
+        });
+        
+        // Chamada inicial para preencher os valores na carga da página
+        document.addEventListener('DOMContentLoaded', () => {
+             calcularOcupacao();
+        });
+
+
+        // --- Lógica para adicionar o custo dos cômodos ao orçamento ---
+        const addOrcamentoBtn = document.getElementById('add-orcamento-btn');
+        const custosContainer = document.getElementById('custos-container');
+        addOrcamentoBtn.addEventListener('click', () => {
+            let isValid = true;
+            
+            // Limpar mensagens de erro anteriores e classes de erro
+            document.querySelectorAll('.error-message').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.error-border').forEach(el => el.classList.remove('error-border'));
+            
+            // Valida campos da Ficha Técnica
+            const tipoProjetoInput = document.getElementById('tipoProjeto');
+            const areaTotalInput = document.getElementById('areaTotal');
+
+            if (tipoProjetoInput.value === '') {
+                isValid = false;
+                tipoProjetoInput.classList.add('error-border');
+                document.getElementById('tipoProjeto-error').classList.remove('hidden');
+            }
+            if (!areaTotalInput.value || parseFloat(areaTotalInput.value) <= 0) {
+                isValid = false;
+                areaTotalInput.classList.add('error-border');
+                document.getElementById('areaTotal-error').classList.remove('hidden');
+            }
+            
+            // Valida campos dos Cômodos
+            const comodos = comodosContainer.querySelectorAll('.comodo-group');
+            if (comodos.length === 0) {
+                 isValid = false;
+                 alert('Adicione pelo menos um cômodo para o orçamento.');
+                 return;
+            }
+
+            comodos.forEach(comodo => {
+                const tipoComodoSelect = comodo.querySelector('select[name="tipoComodo"]');
+                const quantidadeInput = comodo.querySelector('[name="quantidadeComodo"]');
+                const larguraInput = comodo.querySelector('[name="larguraComodo"]');
+                const comprimentoInput = comodo.querySelector('[name="comprimentoComodo"]');
+                
+                if (tipoComodoSelect.value === '' || !quantidadeInput.value || parseFloat(quantidadeInput.value) <= 0 || !larguraInput.value || parseFloat(larguraInput.value) <= 0 || !comprimentoInput.value || parseFloat(comprimentoInput.value) <= 0) {
+                    isValid = false;
+                    tipoComodoSelect.classList.add('error-border');
+                    quantidadeInput.classList.add('error-border');
+                    larguraInput.classList.add('error-border');
+                    comprimentoInput.classList.add('error-border');
+                    alert('Por favor, preencha todos os campos dos cômodos antes de adicionar ao orçamento.');
+                    return; // Sai do forEach, mas a validação geral continua
+                }
+            });
+
+            if (!isValid) {
+                return;
+            }
+
+            // A partir daqui, a lógica é executada apenas se tudo for válido
+            const custoPorM2 = parseFloat(document.getElementById('custoM2').value) || 0;
+            const existingRoomItems = custosContainer.querySelectorAll('.custo-comodo-item');
+            existingRoomItems.forEach(item => item.remove());
+
+            comodos.forEach(comodo => {
+                const tipoComodoSelect = comodo.querySelector('select[name="tipoComodo"]');
+                const tipoComodo = tipoComodoSelect.value;
+                const nomeOutroComodoInput = comodo.querySelector('[name="outroComodoNome"]');
+                const nomeComodo = (tipoComodo === 'outro' && nomeOutroComodoInput) ? nomeOutroComodoInput.value.trim() : tipoComodoSelect.options[tipoComodoSelect.selectedIndex].text;
+                
+                const quantidade = parseFloat(comodo.querySelector('[name="quantidadeComodo"]').value) || 0;
+                const largura = parseFloat(comodo.querySelector('[name="larguraComodo"]').value) || 0;
+                const comprimento = parseFloat(comodo.querySelector('[name="comprimentoComodo"]').value) || 0;
+                const areaComodo = largura * comprimento;
+                const custoTotal = quantidade * areaComodo * custoPorM2;
+
+                const custoDiv = document.createElement('div');
+                custoDiv.className = 'custo-item custo-comodo-item p-4 border rounded-lg bg-gray-50 relative';
+                // Adiciona data attributes para recálculo
+                custoDiv.dataset.quantidade = quantidade;
+                custoDiv.dataset.area = areaComodo;
+                custoDiv.innerHTML = `
+                    <button type="button" class="remove-custo-btn absolute top-2 right-2 text-red-500 hover:text-red-700 transition-colors duration-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </button>
+                    <h4 class="text-md font-semibold text-gray-800 mb-2">${nomeComodo} (${quantidade}x)</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-sm text-gray-600">Área: <span class="font-medium">${areaComodo.toFixed(2)} m²</span></p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Custo: <span class="font-medium text-green-600 custo-valor">${formatCurrency(custoTotal)}</span></p>
+                        </div>
+                    </div>
+                `;
+                custosContainer.appendChild(custoDiv);
+                
+                // Adiciona listener para remover o item
+                custoDiv.querySelector('.remove-custo-btn').addEventListener('click', () => {
+                    custoDiv.remove();
+                    calcularOrcamento();
+                });
+            });
+
+            // Atualiza o orçamento total
+            calcularOrcamento();
+            
+            // Muda para a página de ORÇAMENTO para que o usuário veja o resultado
+            showPage('orcamento-page');
+        });
+
+
+        // --- Lógica de Recálculo e Salvamento de Custo por M² ---
+        const custoM2Input = document.getElementById('custoM2');
+        const descontoInput = document.getElementById('desconto');
+        const acrescimoInput = document.getElementById('acrescimo');
+        
+        function recalcularCustosComodos() {
+            const custoPorM2 = parseFloat(custoM2Input.value) || 0;
+            const comodoItens = custosContainer.querySelectorAll('.custo-comodo-item');
+
+            comodoItens.forEach(item => {
+                const quantidade = parseFloat(item.dataset.quantidade) || 0;
+                const area = parseFloat(item.dataset.area) || 0;
+                const novoCusto = quantidade * area * custoPorM2;
+
+                const custoValorSpan = item.querySelector('.custo-valor');
+                if (custoValorSpan) {
+                    custoValorSpan.textContent = formatCurrency(novoCusto);
+                }
+            });
+            
+            calcularOrcamento();
+        }
+        
+        custoM2Input.addEventListener('input', recalcularCustosComodos);
+
+        document.getElementById('salvar-custo-m2').addEventListener('click', async () => {
+            if (!auth || !auth.currentUser) {
+                alert('Base de dados não conectada. Por favor, configure na aba "Colaborador".');
+                return;
+            }
+            const currentUserId = auth.currentUser.uid;
+            const configDocRef = doc(db, 'artifacts', appId, 'users', currentUserId, 'configuration', 'main');
+            const currentValue = custoM2Input.value;
+
+            try {
+                await setDoc(configDocRef, { custoM2: currentValue }, { merge: true });
+                
+                successModalMessage.textContent = 'Custo por metro quadrado guardado com sucesso!';
+                successModal.style.display = 'flex';
+                console.log("Custo por m² guardado com sucesso:", currentValue);
+
+            } catch (error) {
+                console.error("Erro ao guardar o custo:", error);
+                alert("Ocorreu um erro ao guardar o custo.");
+            }
+        });
+        
+        document.getElementById('salvar-desconto').addEventListener('click', async () => {
+             if (!auth || !auth.currentUser) {
+                alert('Base de dados não conectada. Por favor, configure na aba "Colaborador".');
+                return;
+            }
+            const currentUserId = auth.currentUser.uid;
+            const configDocRef = doc(db, 'artifacts', appId, 'users', currentUserId, 'configuration', 'main');
+            const currentValue = descontoInput.value;
+            
+             try {
+                await setDoc(configDocRef, { desconto: currentValue }, { merge: true });
+                
+                successModalMessage.textContent = 'Desconto guardado com sucesso!';
+                successModal.style.display = 'flex';
+                console.log("Desconto guardado com sucesso:", currentValue);
+                 calcularOrcamento();
+            } catch (error) {
+                console.error("Erro ao guardar o desconto:", error);
+                alert("Ocorreu um erro ao guardar o desconto.");
+            }
+        });
+        
+        document.getElementById('salvar-acrescimo').addEventListener('click', async () => {
+             if (!auth || !auth.currentUser) {
+                alert('Base de dados não conectada. Por favor, configure na aba "Colaborador".');
+                return;
+            }
+            const currentUserId = auth.currentUser.uid;
+            const configDocRef = doc(db, 'artifacts', appId, 'users', currentUserId, 'configuration', 'main');
+            const currentValue = acrescimoInput.value;
+            
+             try {
+                await setDoc(configDocRef, { acrescimo: currentValue }, { merge: true });
+                
+                successModalMessage.textContent = 'Acréscimo guardado com sucesso!';
+                successModal.style.display = 'flex';
+                console.log("Acréscimo guardado com sucesso:", currentValue);
+                 calcularOrcamento();
+            } catch (error) {
+                console.error("Erro ao guardar o acréscimo:", error);
+                alert("Ocorreu um erro ao guardar o acréscimo.");
+            }
+        });
+
+
+        // --- Lógica da seção de Orçamento ---
+        const orcamentoTotalInput = document.getElementById('orcamentoTotal');
+        const totalGastoElement = document.getElementById('totalGasto');
+        const orcamentoRestanteElement = document.getElementById('orcamentoRestante');
+        
+        // Novos elementos para o seletor de parcelas geral
+        const btnParcelasGeral = document.getElementById('btn-parcelas-geral');
+        const parcelasGeralContainer = document.getElementById('parcelas-geral-container');
+        const parcelasGeralSelect = document.getElementById('parcelas-geral-select');
+        const valorParcelaInput = document.getElementById('valor-parcela-input');
+        
+        btnParcelasGeral.addEventListener('click', () => {
+            // Alterna a visibilidade do seletor de parcelas
+            parcelasGeralContainer.classList.toggle('hidden');
+            if(!parcelasGeralContainer.classList.contains('hidden')) {
+                // Exibe o cálculo inicial com 1 parcela
+                updateParcelasGeral();
+            } else {
+                valorParcelaInput.value = '';
+            }
+        });
+
+        parcelasGeralSelect.addEventListener('change', updateParcelasGeral);
+
+        function updateParcelasGeral() {
+            const totalCusto = parseCurrency(totalGastoElement.textContent);
+            const parcelas = parseInt(parcelasGeralSelect.value, 10) || 1;
+            
+            if (totalCusto > 0 && parcelas > 0) {
+                const valorParcela = totalCusto / parcelas;
+                valorParcelaInput.value = formatCurrency(valorParcela);
+            } else {
+                valorParcelaInput.value = formatCurrency(0);
+            }
+        }
+        
+        function calcularOrcamento() {
+            let totalCustoBase = 0;
+            const custoItens = custosContainer.querySelectorAll('.custo-item');
+            
+            custoItens.forEach(item => {
+                let valor = 0;
+                const custoValorSpan = item.querySelector('.custo-valor');
+                if (custoValorSpan) {
+                    valor = parseCurrency(custoValorSpan.textContent);
+                }
+                totalCustoBase += valor;
+            });
+            
+            let totalCustoFinal = totalCustoBase;
+            let percentualAplicado = '';
+            
+            const parcelas = parseInt(parcelasGeralSelect.value, 10);
+            
+            if (parcelas === 1) {
+                const descontoPercentual = parseFloat(descontoInput.value) / 100 || 0;
+                totalCustoFinal = totalCustoBase * (1 - descontoPercentual);
+                if (descontoPercentual > 0) {
+                    percentualAplicado = ` (${(descontoPercentual * 100).toFixed(0)}% de desconto)`;
+                }
+            } else {
+                const acrescimoPercentual = parseFloat(acrescimoInput.value) / 100 || 0;
+                totalCustoFinal = totalCustoBase * (1 + acrescimoPercentual);
+                 if (acrescimoPercentual > 0) {
+                    percentualAplicado = ` (${(acrescimoPercentual * 100).toFixed(0)}% de acréscimo)`;
+                }
+            }
+
+            const orcamentoTotal = parseFloat(orcamentoTotalInput.value) || 0;
+            const orcamentoRestante = orcamentoTotal - totalCustoFinal;
+
+            totalGastoElement.innerHTML = `${formatCurrency(totalCustoFinal)} <span class="text-sm font-normal text-gray-500">${percentualAplicado}</span>`;
+            
+            orcamentoRestanteElement.textContent = formatCurrency(orcamentoRestante);
+
+            if (orcamentoRestante < 0) {
+                orcamentoRestanteElement.classList.remove('text-green-600');
+                orcamentoRestanteElement.classList.add('text-red-600');
+                if (!warningShown) {
+                    warningModal.style.display = 'flex';
+                    warningShown = true;
+                }
+            } else {
+                orcamentoRestanteElement.classList.remove('text-red-600');
+                orcamentoRestanteElement.classList.add('text-green-600');
+            }
+            
+            // Atualiza o seletor de parcelas geral quando o total gasto muda
+            updateParcelasGeral();
+        }
+        
+        // Adiciona listeners para os inputs de orçamento
+        orcamentoTotalInput.addEventListener('input', calcularOrcamento);
+        custosContainer.addEventListener('input', (event) => {
+             const target = event.target;
+             if (target.name === 'custoValor') {
+                 calcularOrcamento();
+             }
+         });
+         
+        descontoInput.addEventListener('input', calcularOrcamento);
+        acrescimoInput.addEventListener('input', calcularOrcamento);
+        parcelasGeralSelect.addEventListener('change', calcularOrcamento);
+
+        document.addEventListener('DOMContentLoaded', calcularOrcamento);
+
+        // --- Lógica da página de Pagamento ---
+        const resumoPagamentoDiv = document.getElementById('resumo-pagamento');
+        const gerarQrcodeBtn = document.getElementById('gerar-qrcode-btn');
+        const qrcodeContainer = document.getElementById('qrcode-container');
+
+        function populatePagamentoPage() {
+            const nomeProjeto = document.getElementById('tipoProjeto').options[document.getElementById('tipoProjeto').selectedIndex].text;
+            const totalGasto = totalGastoElement.textContent;
+            const parcelas = parcelasGeralSelect.options[parcelasGeralSelect.selectedIndex].text;
+            const valorParcela = valorParcelaInput.value;
+
+            resumoPagamentoDiv.innerHTML = `
+                <p class="md:col-span-2 text-center text-lg font-bold">Resumo do Pedido</p>
+                <p><strong>Projeto:</strong> ${nomeProjeto}</p>
+                <p><strong>Custo Total:</strong> ${totalGasto}</p>
+                <p><strong>Parcelamento:</strong> ${parcelas}</p>
+                <p><strong>Valor por Parcela:</strong> ${valorParcela}</p>
+            `;
+            
+            // Limpa o QR code anterior
+            qrcodeContainer.innerHTML = '';
+        }
+
+        gerarQrcodeBtn.addEventListener('click', () => {
+            const totalCusto = parseCurrency(totalGastoElement.textContent);
+            const paymentDetails = {
+                valor: totalCusto,
+                parcelas: parseInt(parcelasGeralSelect.value, 10),
+                cliente: `${nomeInput.value} ${sobrenomeInput.value}`.trim()
+            };
+            
+            // Cria a string para o QR Code (um JSON simplificado)
+            const qrCodeData = JSON.stringify(paymentDetails);
+
+            // Limpa o conteúdo anterior
+            qrcodeContainer.innerHTML = '';
+            
+            // Gera o QR Code
+            const qrcode = new QRCode(qrcodeContainer, {
+                text: qrCodeData,
+                width: 128,
+                height: 128,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+        });
+
+        // --- Lógica de Edição e Geração do Contrato ---
+        
+        // Função para popular o editor de cláusulas
+        function populateClausulasEditor() {
+            const form = document.getElementById('clausulas-form');
+            const defaults = {
+                clausula1: '1.1. O presente contrato tem por objeto a prestação de serviços profissionais de arquitetura pela CONTRATADA ao CONTRATANTE, compreendendo os serviços: Elaboração de projeto arquitetônico',
+                clausula2: '2.1. São obrigações da CONTRATADA: a) Executar os serviços descritos na Cláusula Primeira com zelo, diligência e técnica apurada, observando as normas técnicas aplicáveis e a legislação pertinente. b) Apresentar os trabalhos e projetos nas datas e prazos estabelecidos neste contrato. c) Manter o CONTRATANTE informado sobre o andamento dos serviços. d) Zelar pela confidencialidade das informações e dados fornecidos pelo CONTRATANTE.',
+                clausula3: '3.1. São obrigações do CONTRATANTE: a) Fornecer à CONTRATADA, de forma clara e completa, todas as informações, documentos e subsídios necessários para a correta execução dos serviços. b) Efetuar o pagamento dos honorários e demais valores acordados nas datas e formas estipuladas. c) Apresentar manifestação (aprovação ou solicitação de ajustes) sobre os trabalhos e projetos apresentados pela CONTRATADA dentro dos prazos estipulados. d) Providenciar, por sua conta e risco, todas as licenças, alvarás e aprovações junto aos órgãos competentes, salvo se expressamente acordado de outra forma na Cláusula Primeira. e) Permitir o acesso da CONTRATADA ao local de intervenção, quando necessário para a execução dos serviços.',
+                clausula4: '4.1. O projeto terá início em [Data de início] e previsão de conclusão em [Previsão de Conclusão].\n4.2. Os serviços serão desenvolvidos de acordo com o seguinte cronograma: Levantamento e coleta de dados: até 5º dia útil após a homologação do contrato. apresentação do projeto e ajustes: até 15º dias após a homologação do contrato.\n4.3. Os prazos estabelecidos poderão ser prorrogados, mediante acordo por escrito entre as partes, em caso de força maior, caso fortuito, ou em decorrência de atrasos causados pelo CONTRATANTE.',
+                clausula5: '5.1. Pelos serviços objeto deste contrato, o CONTRATANTE pagará à CONTRATADA o valor total de [Total Gasto] em [Parcelas] de [Valor da parcela].\n5.2. O pagamento será efetuado da seguinte forma: primeira parcela avista no valor [Valor da parcela (R$)] na data da assinatura deste contrato. na entrega do projeto serão pagos o restante dos 50%. No valor de [Valor da parcela (R$)].\n5.3. Os valores mencionados não incluem custos com taxas, impostos, taxas de aprovação de projetos, despesas com cópias, plotagens, materiais de apresentação, consultorias específicas (estrutural, elétrico, hidráulico, etc.), a menos que expressamente acordado de outra forma. Tais custos adicionais serão de responsabilidade do CONTRATANTE e deverão ser previamente orçados e aprovados pela CONTRATADA, caso estejam dentro do escopo de seus serviços.',
+                clausula6: '6.1. O presente contrato poderá ser rescindido por qualquer das partes, mediante comunicação escrita à outra parte com antecedência mínima de 30 dias.\n6.2. Em caso de rescisão imotivada por iniciativa do CONTRATANTE, este deverá pagar à CONTRATADA os honorários proporcionais aos serviços efetivamente prestados até a data da rescisão, acrescidos de 50% a título de multa rescisória.\n6.3. Em caso de rescisão imotivada por iniciativa da CONTRATADA, esta deverá devolver ao CONTRATANTE os valores recebidos antecipadamente pelos serviços que não foram executados, acrescidos de 50% a título de multa rescisória.\n6.4. A rescisão por descumprimento de qualquer cláusula contratual por uma das partes dará à outra o direito de rescindir o contrato imediatamente, sem prejuízo das perdas e danos eventualmente sofridos.',
+                clausula7: '7.1. Os projetos e demais materiais desenvolvidos pela CONTRATADA são de sua propriedade intelectual, nos termos da Lei de Direitos Autorais. O CONTRATANTE terá o direito de uso dos projetos para a finalidade específica acordada neste contrato, não podendo reproduzi-los, ceder, licenciar ou utilizá-los para outros fins sem a prévia e expressa autorização por escrito da CONTRATADA.',
+                clausula8: '8.1. Fica eleito o foro da Comarca de Parnaíba, Estado de Piauí, para dirimir quaisquer dúvidas ou litígios decorrentes do presente contrato, com renúncia expressa a qualquer outro, por mais privilegiado que possa ser.'
+            };
+            
+            for (let i = 1; i <= 8; i++) {
+                const key = `clausula${i}`;
+                form.querySelector(`#clausula-${i}`).value = clausulasPersonalizadas[key] ?? defaults[key];
+            }
+
+            // Limpar e recriar cláusulas adicionais a partir dos dados guardados
+            novasClausulasContainer.innerHTML = '';
+            proximoNumeroNovaClausula = 9;
+
+            if (clausulasPersonalizadas.novas && clausulasPersonalizadas.novas.length > 0) {
+                clausulasPersonalizadas.novas.forEach(clausula => {
+                    const novaClausulaDiv = document.createElement('div');
+                    novaClausulaDiv.className = 'nova-clausula-group relative p-4 border rounded-lg bg-gray-100';
+
+                    novaClausulaDiv.innerHTML = `
+                        <button type="button" class="remove-clausula-btn absolute top-2 right-2 text-red-500 hover:text-red-700 transition-colors duration-200">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </button>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Título da Nova Cláusula</label>
+                            <input type="text" value="CLÁUSULA ${numeroClausula}ª – " class="nova-clausula-titulo mt-1 block w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <div class="mt-4">
+                            <label class="block text-sm font-medium text-gray-700">Texto da Cláusula</label>
+                            <textarea rows="4" class="nova-clausula-texto mt-1 block w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">${clausula.texto}</textarea>
+                        </div>
+                    `;
+
+                    novasClausulasContainer.appendChild(novaClausulaDiv);
+
+                    novaClausulaDiv.querySelector('.remove-clausula-btn').addEventListener('click', () => {
+                        novaClausulaDiv.remove();
+                    });
+
+                    // Atualiza o contador para a próxima cláusula
+                    const match = clausula.titulo.match(/(\d+)/);
+                    if (match) {
+                        const num = parseInt(match[1], 10);
+                        if (num >= proximoNumeroNovaClausula) {
+                            proximoNumeroNovaClausula = num + 1;
+                        }
+                    }
+                });
+            }
+        }
+
+        // Listener para salvar as cláusulas editadas
+        const clausulasForm = document.getElementById('clausulas-form');
+        clausulasForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            for (let i = 1; i <= 8; i++) {
+                const key = `clausula${i}`;
+                clausulasPersonalizadas[key] = document.getElementById(`clausula-${i}`).value;
+            }
+
+            clausulasPersonalizadas.novas = []; // Limpa as cláusulas antigas
+            const novosGrupos = document.querySelectorAll('.nova-clausula-group');
+            novosGrupos.forEach(grupo => {
+                const titulo = grupo.querySelector('.nova-clausula-titulo').value;
+                const texto = grupo.querySelector('.nova-clausula-texto').value;
+                if (titulo.trim() !== '' && texto.trim() !== '') {
+                    clausulasPersonalizadas.novas.push({ titulo, texto });
+                }
+            });
+
+            if (!auth || !auth.currentUser) {
+                alert('Base de dados não conectada. Por favor, configure na aba "Colaborador".');
+                return;
+            }
+            const currentUserId = auth.currentUser.uid;
+            const configDocRef = doc(db, 'artifacts', appId, 'users', currentUserId, 'configuration', 'main');
+
+            try {
+                // Salva as cláusulas no Firebase para que sejam mantidas entre as sessões
+                await setDoc(configDocRef, { 
+                    clausulas: clausulasPersonalizadas
+                }, { merge: true });
+                
+                successModalMessage.textContent = 'Alterações do contrato guardadas com sucesso!';
+                successModal.style.display = 'flex';
+                showPage('contrato-page');
+            } catch (error) {
+                console.error("Erro ao guardar as cláusulas:", error);
+                alert("Ocorreu um erro ao guardar as cláusulas do contrato.");
+            }
+        });
+
+        // Função para preencher o contrato com dados do formulário e cláusulas personalizadas
+        function updateContratoContent() {
+            const today = new Date();
+            const day = String(today.getDate()).padStart(2, '0');
+            const month = String(today.getMonth() + 1).padStart(2, '0'); // Janeiro é 0
+            const year = today.getFullYear();
+            const formattedDate = `${day}/${month}/${year}`;
+
+            // Dados do formulário
+            const data = {
+                '[Data]': formattedDate,
+                '[Nome]': nomeInput.value || '[Nome]',
+                '[Sobrenome]': sobrenomeInput.value || '[Sobrenome]',
+                '[País]': document.getElementById('pais').options[document.getElementById('pais').selectedIndex].text || '[País]',
+                '[Estado civil]': document.getElementById('estadoCivil').options[document.getElementById('estadoCivil').selectedIndex].text || '[Estado Civil]',
+                '[Profissão]': document.getElementById('profissao').value || '[Profissão]',
+                '[RG]': document.getElementById('rg').value || '[RG]',
+                '[CPF]': document.getElementById('cpf').value || '[CPF]',
+                '[Endereço]': document.getElementById('endereco').value || '[Endereço]',
+                '[Bairro]': document.getElementById('bairro').value || '[Bairro]',
+                '[Cidade]': document.getElementById('cidade').value || '[Cidade]',
+                '[Estado]': document.getElementById('estado').value || '[Estado]',
+                '[Data de início]': document.getElementById('dataInicio').value || '[Data de Início]',
+                '[Previsão de Conclusão]': document.getElementById('dataConclusao').value || '[Data de Conclusão]',
+                '[Total Gasto]': totalGastoElement.textContent,
+                '[Parcelas]': `${parcelasGeralSelect.value}x`,
+                '[Valor da parcela]': parseCurrency(valorParcelaInput.value).toFixed(2).replace('.', ','),
+                '[Valor da parcela (R$)]': valorParcelaInput.value
+            };
+
+            const defaults = {
+                clausula1: '1.1. O presente contrato tem por objeto a prestação de serviços profissionais de arquitetura pela CONTRATADA ao CONTRATANTE, compreendendo os serviços: Elaboração de projeto arquitetônico',
+                clausula2: '2.1. São obrigações da CONTRATADA: a) Executar os serviços descritos na Cláusula Primeira com zelo, diligência e técnica apurada, observando as normas técnicas aplicáveis e a legislação pertinente. b) Apresentar os trabalhos e projetos nas datas e prazos estabelecidos neste contrato. c) Manter o CONTRATANTE informado sobre o andamento dos serviços. d) Zelar pela confidencialidade das informações e dados fornecidos pelo CONTRATANTE.',
+                clausula3: '3.1. São obrigações do CONTRATANTE: a) Fornecer à CONTRATADA, de forma clara e completa, todas as informações, documentos e subsídios necessários para a correta execução dos serviços. b) Efetuar o pagamento dos honorários e demais valores acordados nas datas e formas estipuladas. c) Apresentar manifestação (aprovação ou solicitação de ajustes) sobre os trabalhos e projetos apresentados pela CONTRATADA dentro dos prazos estipulados. d) Providenciar, por sua conta e risco, todas as licenças, alvarás e aprovações junto aos órgãos competentes, salvo se expressamente acordado de outra forma na Cláusula Primeira. e) Permitir o acesso da CONTRATADA ao local de intervenção, quando necessário para a execução dos serviços.',
+                clausula4: '4.1. O projeto terá início em [Data de início] e previsão de conclusão em [Previsão de Conclusão].\n4.2. Os serviços serão desenvolvidos de acordo com o seguinte cronograma: Levantamento e coleta de dados: até 5º dia útil após a homologação do contrato. apresentação do projeto e ajustes: até 15º dias após a homologação do contrato.\n4.3. Os prazos estabelecidos poderão ser prorrogados, mediante acordo por escrito entre as partes, em caso de força maior, caso fortuito, ou em decorrência de atrasos causados pelo CONTRATANTE.',
+                clausula5: '5.1. Pelos serviços objeto deste contrato, o CONTRATANTE pagará à CONTRATADA o valor total de [Total Gasto] em [Parcelas] de [Valor da parcela].\n5.2. O pagamento será efetuado da seguinte forma: primeira parcela avista no valor [Valor da parcela (R$)] na data da assinatura deste contrato. na entrega do projeto serão pagos o restante dos 50%. No valor de [Valor da parcela (R$)].\n5.3. Os valores mencionados não incluem custos com taxas, impostos, taxas de aprovação de projetos, despesas com cópias, plotagens, materiais de apresentação, consultorias específicas (estrutural, elétrico, hidráulico, etc.), a menos que expressamente acordado de outra forma. Tais custos adicionais serão de responsabilidade do CONTRATANTE e deverão ser previamente orçados e aprovados pela CONTRATADA, caso estejam dentro do escopo de seus serviços.',
+                clausula6: '6.1. O presente contrato poderá ser rescindido por qualquer das partes, mediante comunicação escrita à outra parte com antecedência mínima de 30 dias.\n6.2. Em caso de rescisão imotivada por iniciativa do CONTRATANTE, este deverá pagar à CONTRATADA os honorários proporcionais aos serviços efetivamente prestados até a data da rescisão, acrescidos de 50% a título de multa rescisória.\n6.3. Em caso de rescisão imotivada por iniciativa da CONTRATADA, esta deverá devolver ao CONTRATANTE os valores recebidos antecipadamente pelos serviços que não foram executados, acrescidos de 50% a título de multa rescisória.\n6.4. A rescisão por descumprimento de qualquer cláusula contratual por uma das partes dará à outra o direito de rescindir o contrato imediatamente, sem prejuízo das perdas e danos eventualmente sofridos.',
+                clausula7: '7.1. Os projetos e demais materiais desenvolvidos pela CONTRATADA são de sua propriedade intelectual, nos termos da Lei de Direitos Autorais. O CONTRATANTE terá o direito de uso dos projetos para a finalidade específica acordada neste contrato, não podendo reproduzi-los, ceder, licenciar ou utilizá-los para outros fins sem a prévia e expressa autorização por escrito da CONTRATADA.',
+                clausula8: '8.1. Fica eleito o foro da Comarca de Parnaíba, Estado de Piauí, para dirimir quaisquer dúvidas ou litígios decorrentes do presente contrato, com renúncia expressa a qualquer outro, por mais privilegiado que possa ser.'
+            };
+
+            function replacePlaceholders(text, data) {
+                 let processedText = text;
+                 for (const key in data) {
+                     processedText = processedText.replace(new RegExp(key.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'g'), `<span class="font-bold">${data[key]}</span>`);
+                 }
+                 return processedText.replace(/\n/g, '<br>');
+            }
+
+            const headerHTML = `
+                <p>Este Contrato de Prestação de Serviços de Arquitetura é celebrado em ${data['[Data]']} entre:</p>
+                <p><strong>CONTRATADO:</strong> Wellington Rodrigues Dos Santos, com sede em Rua Guaporé, 3325 Frei Higino, Parnaíba - PI, 64207-095, inscrito no CPF sob o nº 619.435.113-65, doravante denominada simplesmente CONTRATADA.</p>
+                <p><strong>CONTRATANTE:</strong> ${data['[Nome]']} ${data['[Sobrenome]']}, nacionalidade ${data['[País]']}, estado civil ${data['[Estado civil]']}, profissão ${data['[Profissão]']}, portador(a) da cédula de identidade RG nº ${data['[RG]']} e inscrito(a) no CPF sob o nº ${data['[CPF]']}, residente e domiciliado(a) em, ${data['[Endereço]']}, ${data['[Bairro]']}, ${data['[Cidade]']}, ${data['[Estado]']}, doravante denominado simplesmente CONTRATANTE.</p>
+                <p>As partes acima identificadas têm, entre si, justo e contratado o presente Contrato de Prestação de Serviços de Arquitetura, que se regerá pelas cláusulas seguintes e pelas condições descritas no presente.</p>
+            `;
+            
+            let clausulasHTML = '';
+            for (let i = 1; i <= 8; i++) {
+                const key = `clausula${i}`;
+                const textoClausula = clausulasPersonalizadas[key] ?? defaults[key];
+                clausulasHTML += `<p><strong class="uppercase">${document.querySelector(`label[for=clausula-${i}]`).textContent}:</strong><br>${replacePlaceholders(textoClausula, data)}</p>`;
+            }
+
+            if (clausulasPersonalizadas.novas && clausulasPersonalizadas.novas.length > 0) {
+                clausulasHTML += `<p><strong>${clausulasPersonalizadas.novas[0].titulo.toUpperCase()}:</strong><br>${replacePlaceholders(clausulasPersonalizadas.novas[0].texto, data)}</p>`;
+                clausulasPersonalizadas.novas.slice(1).forEach(clausula => {
+                    clausulasHTML += `<p><strong>${clausula.titulo.toUpperCase()}:</strong><br>${replacePlaceholders(clausula.texto, data)}</p>`;
+                });
+            }
+
+            const footerHTML = `
+                <p>E, por estarem assim justos e contratados, assinam o presente instrumento em 02 (duas) vias de igual teor e forma, na presença das 02 (duas) testemunhas abaixo.</p>
+                <p class="mt-4 text-center">Parnaíba-PI, ${data['[Data de início]']}.</p>
+            `;
+
+            document.getElementById('contrato-content').innerHTML = headerHTML + clausulasHTML + footerHTML;
+        }
+
+        // --- Novas Funções para Sincronização com Firebase ---
+        // Esta função carrega e sincroniza em tempo real as configurações salvas (Custo por M² e Cláusulas do Contrato)
+        // a partir do Firestore. Isso garante que os dados persistam ao fechar e abrir a página.
+        function loadAndSyncConfiguration(userId) {
+            const configDocRef = doc(db, 'artifacts', appId, 'users', userId, 'configuration', 'main');
+
+            onSnapshot(configDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const configData = docSnap.data();
+                    console.log("Configuração carregada do Firebase:", configData);
+
+                    // Atualiza o Custo por M²
+                    if (configData.custoM2 !== undefined) {
+                        document.getElementById('custoM2').value = configData.custoM2;
+                        recalcularCustosComodos(); 
+                    }
+                     // Atualiza os campos de desconto e acréscimo
+                    if (configData.desconto !== undefined) {
+                        document.getElementById('desconto').value = configData.desconto;
+                        calcularOrcamento();
+                    }
+                    if (configData.acrescimo !== undefined) {
+                        document.getElementById('acrescimo').value = configData.acrescimo;
+                        calcularOrcamento();
+                    }
+
+                    // Atualiza as Cláusulas
+                    if (configData.clausulas) {
+                        clausulasPersonalizadas = configData.clausulas;
+                        // Se a página do colaborador estiver visível, atualiza o editor
+                        if (!colaboradorPage.classList.contains('hidden')) {
+                            populateClausulasEditor();
+                        }
+                        // Atualiza a visualização do contrato principal se estiver visível
+                        if (!contratoPage.classList.contains('hidden')) {
+                            updateContratoContent();
+                        }
+                    }
+                } else {
+                    console.log("Nenhum documento de configuração encontrado. Usando valores padrão.");
+                }
+            }, (error) => {
+                console.error("Erro ao ouvir as alterações de configuração:", error);
+                 if(error.code === 'permission-denied') {
+                    alert("Erro de permissão! Verifique se as regras do Firestore Database estão configuradas corretamente na sua consola Firebase. Consulte as instruções na aba 'Colaborador'.");
+                    updateDbStatus(false, "Erro de Regras");
+                }
+            });
+        }
+        
+        // --- Lógica de Geração de PDF (Revisada) ---
+
+        // Função auxiliar para clonar e preparar um elemento para captura pelo html2canvas
+        async function captureElementForPdf(elementId) {
+            const originalElement = document.getElementById(elementId);
+            if (!originalElement) throw new Error(`Elemento com id ${elementId} não encontrado.`);
+
+            const clone = originalElement.cloneNode(true);
+            
+            const mainContainerWidth = document.querySelector('.max-w-4xl').offsetWidth || 896;
+            clone.style.width = mainContainerWidth + 'px';
+            clone.style.position = 'absolute';
+            clone.style.top = '0';
+            clone.style.left = '-9999px';
+            clone.style.height = 'auto'; // Garante que a altura total seja considerada
+            
+            const scrollableElements = clone.querySelectorAll('[class*="overflow-y-auto"]');
+            scrollableElements.forEach(el => {
+                el.classList.remove('overflow-y-auto');
+                el.style.maxHeight = 'none'; 
+            });
+            
+            document.body.appendChild(clone);
+
+            try {
+                await new Promise(resolve => setTimeout(resolve, 100)); 
+
+                const canvas = await html2canvas(clone, { scale: 2, useCORS: true });
+                const imgData = canvas.toDataURL('image/png');
+                if (!imgData || imgData === 'data:,') {
+                    throw new Error(`html2canvas retornou uma imagem vazia para o elemento #${elementId}.`);
+                }
+                return { canvas, imgData };
+            } finally {
+                document.body.removeChild(clone);
+            }
+        }
+        
+        // Função auxiliar para gerir o estado de carregamento dos botões
+        function setButtonLoading(button, isLoading, loadingText = 'A processar...', originalText) {
+            if (!button) return;
+            if (isLoading) {
+                button.dataset.originalText = button.innerHTML;
+                button.innerHTML = `<span class="animate-pulse">${loadingText}</span>`;
+                button.disabled = true;
+            } else {
+                button.innerHTML = button.dataset.originalText || originalText;
+                button.disabled = false;
+            }
+        }
+
+        // Nova função genérica para criar PDFs paginados
+        async function gerarPDFPaginado(elementId, fileName, buttonElement) {
+            // Only manage button loading state if a button is provided
+            if (buttonElement) {
+                setButtonLoading(buttonElement, true, 'A gerar PDF...');
+            }
+            try {
+                const { imgData } = await captureElementForPdf(elementId);
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = pdf.internal.pageSize.getHeight();
+                const imgProps = pdf.getImageProperties(imgData);
+                const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+                let heightLeft = imgHeight;
+                let position = 0;
+
+                pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+                heightLeft -= pdfHeight;
+
+                while (heightLeft > 0) {
+                    position -= pdfHeight;
+                    pdf.addPage();
+                    pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+                    heightLeft -= pdfHeight;
+                }
+
+                pdf.save(fileName);
+            } catch (error) {
+                console.error(`Erro ao gerar PDF para #${elementId}:`, error);
+                alert(`Ocorreu um erro ao gerar o PDF "${fileName}". Verifique o console para mais detalhes.`);
+            } finally {
+                // Only manage button loading state if a button is provided
+                if (buttonElement) {
+                    setButtonLoading(buttonElement, false, buttonElement.dataset.originalText);
+                }
+            }
+        }
+
+        // Função para descarregar o PDF do resumo
+        async function gerarEBaixarPDFResumo(event) {
+            const clientName = `${nomeInput.value}-${sobrenomeInput.value}`.trim() || 'cliente';
+            const fileName = `Resumo-Proposta-${clientName}.pdf`;
+            await gerarPDFPaginado('resumo-body', fileName, event.currentTarget);
+        }
+
+        // Função para descarregar o PDF do contrato
+        async function gerarEBaixarPDFContrato(event) {
+            const clientName = `${nomeInput.value}-${sobrenomeInput.value}`.trim() || 'cliente';
+            const fileName = `Contrato-${clientName}.pdf`;
+            await gerarPDFPaginado('printable-contract', fileName, event.currentTarget);
+        }
+        
+        document.getElementById('gerar-contrato-pdf-main').addEventListener('click', gerarEBaixarPDFContrato);
+        document.getElementById('btn-baixar-resumo-pdf').addEventListener('click', gerarEBaixarPDFResumo);
+        document.getElementById('btn-baixar-contrato-pdf').addEventListener('click', gerarEBaixarPDFContrato);
+        
+        // --- Lógica para adicionar cláusulas dinamicamente ---
+        const addClausulaBtn = document.getElementById('add-clausula-btn');
+        const novasClausulasContainer = document.getElementById('novas-clausulas-container');
+        let proximoNumeroNovaClausula = 9;
+
+        addClausulaBtn.addEventListener('click', () => {
+            const novaClausulaDiv = document.createElement('div');
+            novaClausulaDiv.className = 'nova-clausula-group relative p-4 border rounded-lg bg-gray-100';
+            
+            const numeroClausula = proximoNumeroNovaClausula++;
+
+            novaClausulaDiv.innerHTML = `
+                <button type="button" class="remove-clausula-btn absolute top-2 right-2 text-red-500 hover:text-red-700 transition-colors duration-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </button>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Título da Nova Cláusula</label>
+                    <input type="text" value="CLÁUSULA ${numeroClausula}ª – " class="nova-clausula-titulo mt-1 block w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div class="mt-4">
+                    <label class="block text-sm font-medium text-gray-700">Texto da Cláusula</label>
+                    <textarea rows="4" class="nova-clausula-texto mt-1 block w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                </div>
+            `;
+
+            novasClausulasContainer.appendChild(novaClausulaDiv);
+
+            novaClausulaDiv.querySelector('.remove-clausula-btn').addEventListener('click', () => {
+                novaClausulaDiv.remove();
+            });
+        });
+
+        // --- Lógica do Modal de Resumo ---
+        const resumoModal = document.getElementById('resumo-modal');
+        const resumoBody = document.getElementById('resumo-body');
+        const btnEnviarProposta = document.getElementById('btn-enviar-proposta');
+        const closeResumoModalBtn = document.getElementById('close-resumo-modal-btn');
+        const btnContratar = document.getElementById('btn-contratar');
+        
+        btnEnviarProposta.addEventListener('click', () => {
+            // Gerar e preencher o resumo
+            const resumoHTML = gerarResumoPropostaHTML();
+            resumoBody.innerHTML = resumoHTML;
+            
+            // Mostrar o modal
+            resumoModal.style.display = 'flex';
+        });
+
+        closeResumoModalBtn.addEventListener('click', () => resumoModal.style.display = 'none');
+
+        btnContratar.addEventListener('click', async (event) => {
+            const button = event.currentTarget;
+            setButtonLoading(button, true, 'A processar...');
+
+            try {
+                // 1. Envia o e-mail via Formspree primeiro
+                const emailSent = await sendEmailWithFormspree();
+
+                if (emailSent) {
+                    // 2. Se o e-mail for enviado, prossiga com os downloads de PDF
+                    const clientName = `${nomeInput.value}-${sobrenomeInput.value}`.trim() || 'cliente';
+                    await gerarPDFPaginado('resumo-body', `Resumo-Proposta-${clientName}.pdf`);
+                    await gerarPDFPaginado('printable-contract', `Contrato-${clientName}.pdf`);
+
+                    // 3. Fecha o modal de resumo após a conclusão
+                    resumoModal.style.display = 'none';
+
+                    // 4. Redireciona para a página de pagamento
+                    showPage('pagamento-page');
+
+                } else {
+                    // Se o e-mail falhar, notifica o usuário
+                    alert("Houve um erro ao enviar a proposta por e-mail. Por favor, tente novamente.");
+                }
+
+            } catch (error) {
+                console.error("Erro no processo de contratação:", error);
+                alert("Ocorreu um erro ao processar a contratação. Tente novamente.");
+            } finally {
+                setButtonLoading(button, false, button.dataset.originalText);
+            }
+        });
+
+        // Nova função para enviar dados via Formspree
+        async function sendEmailWithFormspree() {
+            const formData = new FormData();
+            const emailBody = gerarResumoPropostaText(); // Reutiliza a função que gera o texto
+            const clientName = `${nomeInput.value} ${sobrenomeInput.value}`.trim() || 'Cliente';
+
+            // Adiciona os dados ao formulário
+            formData.append('subject', `Nova Proposta de Projeto - ${clientName}`);
+            formData.append('message', emailBody);
+            formData.append('_replyto', document.getElementById('email').value || 'email.nao.fornecido@example.com');
+
+            try {
+                const response = await fetch('https://formspree.io/f/xdkljder', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    console.log('Proposta enviada com sucesso via Formspree!');
+                    return true; // Sucesso
+                } else {
+                    const responseData = await response.json();
+                    if (responseData.errors) {
+                        console.error('Erro do Formspree:', responseData.errors.map(e => e.message).join(', '));
+                    } else {
+                        console.error('Erro desconhecido ao enviar via Formspree.');
+                    }
+                    return false; // Falha
+                }
+            } catch (error) {
+                console.error('Erro de rede ao enviar proposta:', error);
+                return false; // Falha
+            }
+        }
+
+        function gerarResumoPropostaHTML() {
+            // --- Coleta de Dados ---
+            // Cadastro
+            const cliente = {
+                nomeCompleto: `${nomeInput.value} ${sobrenomeInput.value}`.trim(),
+                email: document.getElementById('email').value,
+                telefone: document.getElementById('telefone').value,
+                endereco: `${document.getElementById('endereco').value}, ${document.getElementById('numeroCasa').value}`,
+                bairro: document.getElementById('bairro').value,
+                cidade: document.getElementById('cidade').value,
+                estado: document.getElementById('estado').value,
+                cep: document.getElementById('cep').value,
+                cpf: document.getElementById('cpf').value,
+                rg: document.getElementById('rg').value,
+                profissao: document.getElementById('profissao').value,
+                estadoCivil: document.getElementById('estadoCivil').options[document.getElementById('estadoCivil').selectedIndex].text
+            };
+
+            // Ficha Técnica
+            const ficha = {
+                nomeProjeto: document.getElementById('tipoProjeto').options[document.getElementById('tipoProjeto').selectedIndex].text,
+                areaTotal: document.getElementById('areaTotal').value,
+                dataInicio: document.getElementById('dataInicio').value,
+                dataConclusao: document.getElementById('dataConclusao').value,
+                comodosHTML: Array.from(custosContainer.querySelectorAll('.custo-comodo-item'))
+                                .map(item => `
+                                    <tr class="border-b">
+                                        <td class="py-2 pr-2">${item.querySelector('h4').textContent}</td>
+                                        <td class="py-2 text-right">${item.querySelector('.custo-valor').textContent}</td>
+                                    </tr>`)
+                                .join('')
+            };
+            
+            // Orçamento
+            const orcamento = {
+                orcamentoTotal: formatCurrency(parseFloat(document.getElementById('orcamentoTotal').value) || 0),
+                totalGasto: totalGastoElement.textContent,
+                orcamentoRestante: orcamentoRestanteElement.textContent,
+                parcelamento: `${parcelasGeralSelect.options[parcelasGeralSelect.selectedIndex].text} de ${valorParcelaInput.value}`
+            };
+
+            // Contrato
+            updateContratoContent(); 
+            const contratoPreviewHTML = document.getElementById('contrato-content').innerHTML;
+
+            // --- Montagem do HTML ---
+            return `
+                <div class="space-y-6">
+                    <!-- DADOS DO CLIENTE -->
+                    <div>
+                        <h3 class="font-bold text-xl text-indigo-700 border-b-2 border-indigo-200 pb-2 mb-3">Dados do Cliente</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                            <p><strong>Nome:</strong> ${cliente.nomeCompleto}</p>
+                            <p><strong>CPF:</strong> ${cliente.cpf}</p>
+                            <p><strong>E-mail:</strong> ${cliente.email}</p>
+                            <p><strong>RG:</strong> ${cliente.rg}</p>
+                            <p><strong>Telefone:</strong> ${cliente.telefone}</p>
+                            <p><strong>Profissão:</strong> ${cliente.profissao}</p>
+                            <p class="md:col-span-2"><strong>Endereço:</strong> ${cliente.endereco}, ${cliente.bairro}, ${cliente.cidade} - ${cliente.estado}, CEP: ${cliente.cep}</p>
+                        </div>
+                    </div>
+
+                    <!-- DETALHES DO PROJETO -->
+                    <div>
+                        <h3 class="font-bold text-xl text-indigo-700 border-b-2 border-indigo-200 pb-2 mb-3">Detalhes do Projeto</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                            <p><strong>Projeto:</strong> ${ficha.nomeProjeto}</p>
+                            <p><strong>Área Total:</strong> ${ficha.areaTotal} m²</p>
+                            <p><strong>Início Previsto:</strong> ${new Date(ficha.dataInicio + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
+                            <p><strong>Conclusão Prevista:</strong> ${new Date(ficha.dataConclusao + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
+                        </div>
+                    </div>
+
+                    <!-- RESUMO FINANCEIRO -->
+                    <div>
+                        <h3 class="font-bold text-xl text-indigo-700 border-b-2 border-indigo-200 pb-2 mb-3">Resumo Financeiro</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                            <p><strong>Orçamento Total:</strong> <span class="font-semibold">${orcamento.orcamentoTotal}</span></p>
+                            <p><strong>Custo Total do Projeto:</strong> <span class="font-semibold text-red-600">${orcamento.totalGasto}</span></p>
+                            <p><strong>Saldo do Orçamento:</strong> <span class="font-semibold ${orcamento.orcamentoRestante.includes('-') ? 'text-red-600' : 'text-green-600'}">${orcamento.orcamentoRestante}</span></p>
+                            <p><strong>Forma de Pagamento:</strong> ${orcamento.parcelamento}</p>
+                        </div>
+                        <div class="mt-4">
+                            <h4 class="font-semibold text-md text-gray-800 mb-2">Itens de Custo:</h4>
+                            <table class="w-full text-left text-sm">
+                                <thead>
+                                    <tr class="border-b">
+                                        <th class="py-1 font-semibold">Descrição</th>
+                                        <th class="py-1 font-semibold text-right">Valor</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${ficha.comodosHTML}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- PRÉ-VISUALIZAÇÃO DO CONTRATO -->
+                    <div>
+                        <h3 class="font-bold text-xl text-indigo-700 border-b-2 border-indigo-200 pb-2 mb-3">Pré-visualização do Contrato</h3>
+                        <div class="border rounded-lg p-4 bg-white max-h-64 overflow-y-auto text-xs text-gray-600 leading-normal contract-preview-content">
+                            ${contratoPreviewHTML}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function gerarResumoPropostaText() {
+             // --- Coleta de Dados ---
+            const cliente = {
+                nomeCompleto: `${nomeInput.value} ${sobrenomeInput.value}`.trim(),
+                email: document.getElementById('email').value,
+                telefone: document.getElementById('telefone').value,
+                endereco: `${document.getElementById('endereco').value}, ${document.getElementById('numeroCasa').value}, ${document.getElementById('bairro').value}, ${document.getElementById('cidade').value} - ${document.getElementById('estado').value}, CEP: ${document.getElementById('cep').value}`,
+                cpf: document.getElementById('cpf').value
+            };
+            const ficha = {
+                nomeProjeto: document.getElementById('tipoProjeto').options[document.getElementById('tipoProjeto').selectedIndex].text,
+                areaTotal: document.getElementById('areaTotal').value,
+                comodosText: Array.from(custosContainer.querySelectorAll('.custo-comodo-item'))
+                               .map(item => `- ${item.querySelector('h4').textContent} - Custo: ${item.querySelector('.custo-valor').textContent}`)
+                               .join('\n')
+            };
+            const orcamento = {
+                totalGasto: totalGastoElement.textContent,
+                parcelamento: `${parcelasGeralSelect.options[parcelasGeralSelect.selectedIndex].text} de ${valorParcelaInput.value}`
+            };
+
+            // --- Montagem do Texto ---
+            return `Olá,
+
+Uma nova proposta foi aceite e contratada através da aplicação.
+**IMPORTANTE: Os PDFs do resumo e do contrato foram gerados e descarregados pelo cliente no momento da contratação.**
+
+Abaixo estão os detalhes do resumo da proposta:
+
+--- DADOS DO CLIENTE ---
+Nome: ${cliente.nomeCompleto}
+CPF: ${cliente.cpf}
+Email: ${cliente.email}
+Telefone: ${cliente.telefone}
+Endereço: ${cliente.endereco}
+
+--- DETALHES DO PROJETO ---
+Nome do Projeto: ${ficha.nomeProjeto}
+Área Total: ${ficha.areaTotal} m²
+Itens de Custo:
+${ficha.comodosText}
+
+--- RESUMO FINANCEIRO ---
+Custo Total do Projeto: ${orcamento.totalGasto}
+Forma de Pagamento: ${orcamento.parcelamento}
+
+--- CONTRATO ---
+O contrato foi gerado com ${8 + (clausulasPersonalizadas.novas ? clausulasPersonalizadas.novas.length : 0)} cláusulas.
+
+Por favor, entre em contato com o cliente para dar seguimento.
+
+Atenciosamente,
+Sistema de Gestão de Projetos
+            `;
+        }
+        
+        // --- Lógica para o Modal de Configuração do Firebase ---
+        const configFirebaseBtn = document.getElementById('config-firebase-btn');
+        const firebaseConfigModal = document.getElementById('firebase-config-modal');
+        const closeConfigModalBtn = document.getElementById('close-config-modal-btn');
+        const firebaseConfigForm = document.getElementById('firebase-config-form');
+        const firebaseConfigInput = document.getElementById('firebase-config-input');
+        const configError = document.getElementById('config-error');
+
+        configFirebaseBtn.addEventListener('click', () => {
+            firebaseConfigModal.style.display = 'flex';
+            // Preenche com a configuração atual, se existir
+            const currentConfig = localStorage.getItem(FIREBASE_CONFIG_KEY);
+            if (currentConfig) {
+                firebaseConfigInput.value = `const firebaseConfig = ${currentConfig};`;
+            }
+        });
+
+        closeConfigModalBtn.addEventListener('click', () => {
+            firebaseConfigModal.style.display = 'none';
+        });
+
+        firebaseConfigForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            let configObject = null;
+            let configString = firebaseConfigInput.value;
+            
+            try {
+                // Tenta extrair o objeto de configuração do texto colado
+                const match = configString.match(/\{[\s\S]*\}/);
+                if (!match) {
+                    throw new Error("Nenhum objeto de configuração válido encontrado.");
+                }
+
+                // A string dentro de match[0] é um objeto literal de JS, não JSON.
+                // A forma mais segura de o avaliar é usando uma função.
+                const objectString = match[0];
+                const func = new Function(`return ${objectString}`);
+                configObject = func();
+                
+                // Validação básica para garantir que as chaves essenciais existem
+                if (!configObject.apiKey || !configObject.authDomain) {
+                    throw new Error("A configuração não contém 'apiKey' ou 'authDomain'.");
+                }
+
+                configError.classList.add('hidden');
+
+                // Guarda a configuração correta no localStorage
+                localStorage.setItem(FIREBASE_CONFIG_KEY, JSON.stringify(configObject));
+                
+                successModalMessage.textContent = 'Configuração da base de dados guardada! A página será recarregada para aplicar as alterações.';
+                successModal.style.display = 'flex';
+
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2500);
+
+            } catch (error) {
+                console.error("Erro ao processar a configuração do Firebase:", error);
+                configError.textContent = 'Configuração inválida. Certifique-se de que colou o objeto de configuração correto do Firebase.';
+                configError.classList.remove('hidden');
+                return;
+            }
+        });
+
+    </script>
+</body>
+</html>

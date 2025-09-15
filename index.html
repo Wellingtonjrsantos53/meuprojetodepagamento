@@ -60,7 +60,7 @@
         }
 
         .proposal-modal-content {
-             background-color: #fff;
+            background-color: #fff;
             padding: 24px;
             border-radius: 12px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -296,12 +296,12 @@
                     <div>
                         <label for="arquivos" class="block text-sm font-medium text-gray-700">Anexar documentos "RG" e "CPF"</label>
                         <input type="file" id="arquivos" name="arquivos" multiple class="mt-1 block w-full text-sm text-gray-500
-                          file:mr-4 file:py-2 file:px-4
-                          file:rounded-full file:border-0
-                          file:text-sm file:font-semibold
-                          file:bg-indigo-50 file:text-indigo-700
-                          hover:file:bg-indigo-100" />
-                          <p class="mt-1 text-sm text-gray-500">Permitido anexar mais de um arquivo.</p>
+                             file:mr-4 file:py-2 file:px-4
+                             file:rounded-full file:border-0
+                             file:text-sm file:font-semibold
+                             file:bg-indigo-50 file:text-indigo-700
+                             hover:file:bg-indigo-100" />
+                             <p class="mt-1 text-sm text-gray-500">Permitido anexar mais de um arquivo.</p>
                     </div>
                 </div>
 
@@ -469,37 +469,37 @@
                     
                     <!-- Botão e seletor de parcelas do orçamento geral -->
                     <div class="mt-6 flex flex-col sm:flex-row items-center gap-4">
-                         <button id="btn-parcelas-geral" class="w-full sm:w-auto px-6 py-3 bg-indigo-600 text-white font-semibold rounded-full shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
-                             Adicionar Parcelas
-                         </button>
-                         <button id="go-to-ficha-btn" class="w-full sm:w-auto px-6 py-3 bg-gray-400 text-white font-semibold rounded-full shadow-md hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-colors duration-200">
-                            Voltar para Ficha
-                        </button>
-                         <div id="parcelas-geral-container" class="w-full sm:w-auto hidden flex flex-col sm:flex-row items-end gap-4">
-                            <div>
-                                <label for="parcelas-geral-select" class="block text-sm font-medium text-indigo-700 mb-1 text-left">Parcelas</label>
-                                <select id="parcelas-geral-select" class="w-full px-4 py-2 text-lg text-gray-700 bg-gray-100 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors cursor-pointer" required>
-                                    <option value="" disabled selected>Selecione as parcelas</option>
-                                    <option value="1">1x</option>
-                                    <option value="2">2x</option>
-                                    <option value="3">3x</option>
-                                    <option value="4">4x</option>
-                                    <option value="5">5x</option>
-                                    <option value="6">6x</option>
-                                    <option value="7">7x</option>
-                                    <option value="8">8x</option>
-                                    <option value="9">9x</option>
-                                    <option value="10">10x</option>
-                                    <option value="11">11x</option>
-                                    <option value="12">12x</option>
-                                </select>
-                                <p id="parcelas-error" class="mt-1 text-sm text-red-500 hidden">Selecione as parcelas.</p>
+                            <button id="btn-parcelas-geral" class="w-full sm:w-auto px-6 py-3 bg-indigo-600 text-white font-semibold rounded-full shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
+                                Adicionar Parcelas
+                            </button>
+                            <button id="go-to-ficha-btn" class="w-full sm:w-auto px-6 py-3 bg-gray-400 text-white font-semibold rounded-full shadow-md hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-colors duration-200">
+                                Voltar para Ficha
+                            </button>
+                            <div id="parcelas-geral-container" class="w-full sm:w-auto hidden flex flex-col sm:flex-row items-end gap-4">
+                                <div>
+                                    <label for="parcelas-geral-select" class="block text-sm font-medium text-indigo-700 mb-1 text-left">Parcelas</label>
+                                    <select id="parcelas-geral-select" class="w-full px-4 py-2 text-lg text-gray-700 bg-gray-100 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors cursor-pointer" required>
+                                        <option value="" disabled selected>Selecione as parcelas</option>
+                                        <option value="1">1x</option>
+                                        <option value="2">2x</option>
+                                        <option value="3">3x</option>
+                                        <option value="4">4x</option>
+                                        <option value="5">5x</option>
+                                        <option value="6">6x</option>
+                                        <option value="7">7x</option>
+                                        <option value="8">8x</option>
+                                        <option value="9">9x</option>
+                                        <option value="10">10x</option>
+                                        <option value="11">11x</option>
+                                        <option value="12">12x</option>
+                                    </select>
+                                    <p id="parcelas-error" class="mt-1 text-sm text-red-500 hidden">Selecione as parcelas.</p>
+                                </div>
+                                <div>
+                                   <label for="valor-parcela-input" class="block text-sm font-medium text-indigo-700 mb-1 text-left">Valor da Parcela (R$)</label>
+                                   <input type="text" id="valor-parcela-input" class="w-full px-4 py-2 text-lg text-gray-700 bg-gray-200 border border-gray-300 rounded-lg focus:outline-none readonly-field" readonly placeholder="R$ 0,00">
+                                </div>
                             </div>
-                            <div>
-                               <label for="valor-parcela-input" class="block text-sm font-medium text-indigo-700 mb-1 text-left">Valor da Parcela (R$)</label>
-                               <input type="text" id="valor-parcela-input" class="w-full px-4 py-2 text-lg text-gray-700 bg-gray-200 border border-gray-300 rounded-lg focus:outline-none readonly-field" readonly placeholder="R$ 0,00">
-                            </div>
-                         </div>
                     </div>
                 </div>
 
@@ -747,7 +747,7 @@
         </div>
     </div>
 
-     <!-- Modal de Resumo da Proposta -->
+      <!-- Modal de Resumo da Proposta -->
     <div id="resumo-modal" class="modal">
         <div class="proposal-modal-content">
             <div id="resumo-content">
@@ -786,7 +786,7 @@
     <div id="firebase-config-modal" class="modal">
         <div class="modal-content-lg text-left">
             <h3 class="text-2xl font-bold text-gray-800 mb-4 text-center">Configurar Base de Dados</h3>
-            <p class="text-gray-600 mb-6 text-center">Para guardar os dados permanentemente no seu site (ex: Wix), precisa de conectar a sua própria base de dados Firebase.</p>
+            <p class="text-gray-600 mb-6 text-center">Para guardar os dados permanentemente, precisa de seguir estes 4 passos:</p>
             <form id="firebase-config-form">
                 <div class="space-y-4 text-sm">
                     <p><strong>1. Crie um Projeto Firebase:</strong> Aceda ao <a href="https://console.firebase.google.com/" target="_blank" class="text-blue-600 hover:underline font-semibold">seu painel do Firebase</a> e crie um novo projeto (se ainda não tiver um).</p>
@@ -803,7 +803,7 @@ service cloud.firestore {
                     <p><strong>4. Obtenha e Cole a Configuração:</strong> Vá para <strong>Project Settings</strong> (ícone de engrenagem) > <strong>General</strong>. Na secção "Your apps", clique no ícone da Web (<strong>&lt;/&gt;</strong>) e copie o objeto <code>firebaseConfig</code> para a caixa abaixo.</p>
                     <div>
                         <label for="firebase-config-input" class="block text-sm font-medium text-gray-700">Cole o objeto de configuração do Firebase aqui:</label>
-                        <textarea id="firebase-config-input" rows="8" class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm" placeholder='const firebaseConfig = {\n  apiKey: "AIza...",\n  authDomain: "...",\n  ...\n};'></textarea>
+                        <textarea id="firebase-config-input" rows="8" class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm" placeholder='const firebaseConfig = {\n  apiKey: "AIza...",\n  authDomain: "...",\n  ... \n};'></textarea>
                         <p id="config-error" class="text-red-500 text-sm mt-2 hidden">Configuração inválida. Por favor, cole o objeto JavaScript completo.</p>
                     </div>
                 </div>
@@ -1137,7 +1137,7 @@ service cloud.firestore {
                     alert('Ocorreu um erro ao salvar os dados. Verifique a consola para mais detalhes.');
                 }
             } else {
-                 alert('Base de dados não conectada. Por favor, configure na aba "Colaborador" antes de guardar dados.');
+                alert('Base de dados não conectada. Por favor, configure na aba "Colaborador" antes de guardar dados.');
             }
 
             // Sempre avança para a próxima página após o clique
@@ -1676,8 +1676,8 @@ service cloud.firestore {
              if (target.name === 'custoValor') {
                  calcularOrcamento();
              }
-         });
-         
+           });
+           
         descontoInput.addEventListener('input', calcularOrcamento);
         acrescimoInput.addEventListener('input', calcularOrcamento);
         parcelasGeralSelect.addEventListener('change', calcularOrcamento);
@@ -1688,10 +1688,6 @@ service cloud.firestore {
         const resumoPagamentoDiv = document.getElementById('resumo-pagamento');
         const gerarQrcodeBtn = document.getElementById('gerar-qrcode-btn');
         const qrcodeContainer = document.getElementById('qrcode-container');
-        const paymentForm = document.getElementById('payment-form');
-
-        // URL do seu servidor Vercel para que as requisições sejam enviadas para o servidor correto
-        const backendUrl = 'https://meuprojetodepagamento-kojx78uyg-wellingtons-projects-02014e31.vercel.app';
 
         function populatePagamentoPage() {
             const nomeProjeto = document.getElementById('tipoProjeto').options[document.getElementById('tipoProjeto').selectedIndex].text;
@@ -1712,65 +1708,43 @@ service cloud.firestore {
         }
 
         gerarQrcodeBtn.addEventListener('click', async () => {
-             const totalCusto = parseCurrency(totalGastoElement.textContent);
+            const totalCusto = parseCurrency(totalGastoElement.textContent);
             const paymentDetails = {
                 valor: totalCusto,
                 parcelas: parseInt(parcelasGeralSelect.value, 10),
                 cliente: `${nomeInput.value} ${sobrenomeInput.value}`.trim()
             };
 
-            // Faz a requisição para o servidor Vercel
+            const backendUrl = 'https://meuprojetodepagamento-kojx78uyg-wellingtons-projects-02014e31.vercel.app/';
+            
             try {
-                const response = await fetch(`${backendUrl}/create_payment`, {
+                const response = await fetch(`${backendUrl}create_payment`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(paymentDetails)
+                    body: JSON.stringify(paymentDetails),
                 });
 
                 if (!response.ok) {
-                    throw new Error(`Erro do servidor: ${response.status}`);
+                    throw new Error('Erro na requisição. Verifique o servidor.');
                 }
 
-                const responseData = await response.json();
-
+                const data = await response.json();
+                
                 // Limpa o conteúdo anterior
                 qrcodeContainer.innerHTML = '';
                 
-                // Gera o QR Code com o conteúdo da resposta do servidor
-                if (responseData.qr_code) {
-                    const qrcode = new QRCode(qrcodeContainer, {
-                        text: responseData.qr_code, // Usa o QR Code retornado pelo servidor
-                        width: 128,
-                        height: 128,
-                        colorDark : "#000000",
-                        colorLight : "#ffffff",
-                        correctLevel : QRCode.CorrectLevel.H
-                    });
-                     // Adiciona o botão para copiar o código Pix
-                     const copyPixBtn = document.createElement('button');
-                     copyPixBtn.id = 'copy-pix-btn';
-                     copyPixBtn.className = 'mt-4 px-6 py-2 bg-blue-600 text-white font-semibold rounded-full shadow-md hover:bg-blue-700';
-                     copyPixBtn.textContent = 'Copiar Código Pix';
-                     qrcodeContainer.appendChild(copyPixBtn);
+                // Gera o QR Code com a resposta da API
+                const qrcode = new QRCode(qrcodeContainer, {
+                    text: data.qrCodeData, // Usa a resposta da API
+                    width: 128,
+                    height: 128,
+                    colorDark : "#000000",
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.H
+                });
 
-                     copyPixBtn.addEventListener('click', () => {
-                         const pixCode = responseData.pix_code;
-                         if (pixCode) {
-                             // Copia o código Pix para a área de transferência
-                             navigator.clipboard.writeText(pixCode).then(() => {
-                                 alert('Código Pix copiado com sucesso!');
-                             }).catch(err => {
-                                 console.error('Erro ao copiar o código Pix:', err);
-                                 alert('Erro ao copiar o código Pix.');
-                             });
-                         }
-                     });
-                } else {
-                    alert('Erro ao gerar o QR Code. O servidor não retornou um código válido.');
-                }
             } catch (error) {
-                console.error('Erro na requisição:', error);
-                alert('Erro ao se comunicar com o servidor. Verifique a consola.');
+                console.error("Erro na requisição:", error);
             }
         });
 
@@ -2265,12 +2239,12 @@ service cloud.firestore {
                 dataInicio: document.getElementById('dataInicio').value,
                 dataConclusao: document.getElementById('dataConclusao').value,
                 comodosHTML: Array.from(custosContainer.querySelectorAll('.custo-comodo-item'))
-                                .map(item => `
-                                    <tr class="border-b">
-                                        <td class="py-2 pr-2">${item.querySelector('h4').textContent}</td>
-                                        <td class="py-2 text-right">${item.querySelector('.custo-valor').textContent}</td>
-                                    </tr>`)
-                                .join('')
+                                         .map(item => `
+                                             <tr class="border-b">
+                                                 <td class="py-2 pr-2">${item.querySelector('h4').textContent}</td>
+                                                 <td class="py-2 text-right">${item.querySelector('.custo-valor').textContent}</td>
+                                             </tr>`)
+                                         .join('')
             };
             
             // Orçamento
@@ -2362,8 +2336,8 @@ service cloud.firestore {
                 nomeProjeto: document.getElementById('tipoProjeto').options[document.getElementById('tipoProjeto').selectedIndex].text,
                 areaTotal: document.getElementById('areaTotal').value,
                 comodosText: Array.from(custosContainer.querySelectorAll('.custo-comodo-item'))
-                               .map(item => `- ${item.querySelector('h4').textContent} - Custo: ${item.querySelector('.custo-valor').textContent}`)
-                               .join('\n')
+                                       .map(item => `- ${item.querySelector('h4').textContent} - Custo: ${item.querySelector('.custo-valor').textContent}`)
+                                       .join('\n')
             };
             const orcamento = {
                 totalGasto: totalGastoElement.textContent,

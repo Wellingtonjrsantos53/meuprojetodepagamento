@@ -1,17 +1,9 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "server.js",
-      "use": "@vercel/node"
-    }
-  ],
+  "version": 3,
   "routes": [
     {
       "src": "/create_pix_payment",
-      "methods": [
-        "POST"
-      ],
+      "methods": ["POST"],
       "dest": "server.js"
     },
     {

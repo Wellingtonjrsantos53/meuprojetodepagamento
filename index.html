@@ -1127,7 +1127,7 @@ service cloud.firestore {
             if (!currentPaymentId) return;
             
             try {
-                const response = await fetch(`http://localhost:3001/payment_status/${currentPaymentId}`);
+                const response = await fetch(`/payment_status/${currentPaymentId}`);
                 const data = await response.json();
                 
                 if (data.success) {

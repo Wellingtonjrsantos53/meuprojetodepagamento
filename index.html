@@ -81,7 +81,7 @@
     </div>
 
     <!-- Container principal que gerencia as páginas -->
-    <div class="bg-white p-4 sm:p-8 rounded-xl shadow-lg w-full max-w-4xl border border-gray-200">
+    <div id="main-container" class="bg-white p-4 sm:p-8 rounded-xl shadow-lg w-full max-w-4xl border border-gray-200">
         
         <!-- Navegação entre as páginas -->
         <nav class="relative mb-6 border-b-2 border-gray-200 pb-4">
@@ -567,7 +567,7 @@
                 <div class="bg-white p-6 rounded-lg shadow-md text-center">
                     <h2 class="text-xl font-semibold text-gray-800 mb-4">Gerar QR Code para Pagamento</h2>
                     <button id="gerar-qrcode-btn" class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-full shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
-                        Gerar QR Code
+                        Gerar QR Code PIX
                     </button>
                     <div id="qrcode-container" class="mt-6 flex justify-center">
                         <!-- O QR Code será injetado aqui -->
@@ -725,6 +725,52 @@
         </div>
     </div>
 
+    <!-- Página de Obrigado (escondida por padrão) -->
+    <div id="obrigado-page" class="page-content hidden">
+        <div class="max-w-2xl mx-auto text-center">
+            <div class="bg-white rounded-lg shadow-lg p-8">
+                <!-- Ícone de sucesso -->
+                <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-6">
+                    <svg class="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                </div>
+                
+                <h1 class="text-3xl font-bold text-gray-800 mb-4">Obrigado!</h1>
+                <h2 class="text-xl text-gray-600 mb-6">Pagamento Aprovado com Sucesso</h2>
+                
+                <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                    <p class="text-green-800 font-medium">✓ Seu pagamento foi processado com sucesso</p>
+                    <p class="text-green-700 text-sm mt-1">Você receberá uma confirmação por email em breve</p>
+                </div>
+                
+                <div class="space-y-4 text-left bg-gray-50 p-4 rounded-lg mb-6">
+                    <h3 class="font-semibold text-gray-800">Próximos Passos:</h3>
+                    <ul class="space-y-2 text-sm text-gray-600">
+                        <li>• Nossa equipe iniciará o desenvolvimento do seu projeto</li>
+                        <li>• Você será contactado em até 24 horas para agendar a primeira reunião</li>
+                        <li>• Mantenha seus dados de contacto atualizados</li>
+                        <li>• Caso tenha dúvidas, entre em contacto connosco</li>
+                    </ul>
+                </div>
+                
+                <div class="border-t pt-4">
+                    <p class="text-sm text-gray-500 mb-4">
+                        ID do Pagamento: <span id="payment-id-display" class="font-mono">---</span>
+                    </p>
+                    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                        <button id="novo-projeto-btn" class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
+                            Iniciar Novo Projeto
+                        </button>
+                        <button id="contacto-btn" class="px-6 py-3 bg-gray-600 text-white font-semibold rounded-lg shadow-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors duration-200">
+                            Entrar em Contacto
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal de Alerta -->
     <div id="warning-modal" class="modal">
         <div class="modal-content">
@@ -815,6 +861,45 @@ service cloud.firestore {
         </div>
     </div>
 
+    <!-- Modal de Pagamento PIX -->
+    <div id="pix-modal" class="modal">
+        <div class="modal-content-lg text-center">
+            <h3 class="text-2xl font-bold text-green-600 mb-4">Pagamento PIX</h3>
+            <div id="pix-content">
+                <div id="pix-qrcode-container" class="mb-6 flex justify-center">
+                    <!-- QR Code será inserido aqui -->
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg mb-4">
+                    <p class="text-sm font-semibold text-gray-700 mb-2">Código PIX (Copia e Cola):</p>
+                    <div class="bg-white p-3 border rounded border-gray-300 text-xs break-all font-mono" id="pix-copy-paste-code">
+                        <!-- Código copia e cola será inserido aqui -->
+                    </div>
+                    <button id="copy-pix-code-btn" class="mt-2 px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Copiar Código
+                    </button>
+                </div>
+                <div class="mb-4">
+                    <p class="text-sm text-gray-600">Valor: <span id="pix-amount" class="font-semibold">R$ 0,00</span></p>
+                    <p class="text-sm text-gray-600">Status: <span id="pix-status" class="font-semibold">Aguardando pagamento</span></p>
+                </div>
+                <div class="text-sm text-gray-500 mb-4">
+                    <p>• Abra seu app de banco ou carteira digital</p>
+                    <p>• Escaneie o QR Code ou copie e cole o código PIX</p>
+                    <p>• Confirme o pagamento no seu app</p>
+                </div>
+                <div class="flex gap-4 justify-center">
+                    <button id="check-payment-status-btn" class="px-6 py-2 bg-orange-600 text-white font-semibold rounded-lg shadow-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500">
+                        Verificar Status
+                    </button>
+                    <button id="close-pix-modal-btn" class="px-6 py-2 bg-gray-300 text-gray-800 font-semibold rounded-lg shadow-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400">
+                        Fechar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 
     <!-- Script para navegação, cálculos e integração com Firebase -->
     <script type="module">
@@ -951,12 +1036,14 @@ service cloud.firestore {
         }
 
         // Variáveis de página e botões
+        const mainContainer = document.getElementById('main-container');
         const cadastroPage = document.getElementById('cadastro-page');
         const fichaTecnicaPage = document.getElementById('ficha-tecnica-page');
         const orcamentoPage = document.getElementById('orcamento-page');
         const pagamentoPage = document.getElementById('pagamento-page');
         const contratoPage = document.getElementById('contrato-page');
         const colaboradorPage = document.getElementById('colaborador-page');
+        const obrigadoPage = document.getElementById('obrigado-page');
         const btnCadastro = document.getElementById('btn-cadastro');
         const btnFichaTecnica = document.getElementById('btn-ficha-tecnica');
         const btnOrcamento = document.getElementById('btn-orcamento');
@@ -1014,6 +1101,118 @@ service cloud.firestore {
             targetPageAfterPassword = null; // Limpa o alvo se o modal for fechado
         });
 
+        // Modal PIX
+        const pixModal = document.getElementById('pix-modal');
+        const closePixModalBtn = document.getElementById('close-pix-modal-btn');
+        const copyPixCodeBtn = document.getElementById('copy-pix-code-btn');
+        const checkPaymentStatusBtn = document.getElementById('check-payment-status-btn');
+        
+        let currentPaymentId = null;
+        
+        closePixModalBtn.addEventListener('click', () => {
+            pixModal.style.display = 'none';
+        });
+        
+        copyPixCodeBtn.addEventListener('click', () => {
+            const pixCode = document.getElementById('pix-copy-paste-code').textContent;
+            navigator.clipboard.writeText(pixCode).then(() => {
+                copyPixCodeBtn.textContent = 'Copiado!';
+                setTimeout(() => {
+                    copyPixCodeBtn.textContent = 'Copiar Código';
+                }, 2000);
+            });
+        });
+        
+        checkPaymentStatusBtn.addEventListener('click', async () => {
+            if (!currentPaymentId) return;
+            
+            try {
+                const response = await fetch(`http://localhost:3001/payment_status/${currentPaymentId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const statusElement = document.getElementById('pix-status');
+                    statusElement.textContent = data.status === 'approved' ? 'Pago' : 'Aguardando pagamento';
+                    
+                    if (data.status === 'approved') {
+                        statusElement.className = 'font-semibold text-green-600';
+                        pixModal.style.display = 'none';
+                        showObrigadoPage(currentPaymentId);
+                    }
+                }
+            } catch (error) {
+                console.error('Erro ao verificar status:', error);
+            }
+        });
+        
+        function showPixModal(pixData, amount) {
+            // Atualizar elementos do modal
+            document.getElementById('pix-amount').textContent = `R$ ${amount.toFixed(2).replace('.', ',')}`;
+            document.getElementById('pix-status').textContent = 'Aguardando pagamento';
+            document.getElementById('pix-status').className = 'font-semibold text-orange-600';
+            
+            // Limpar container do QR Code
+            const qrcodeContainer = document.getElementById('pix-qrcode-container');
+            qrcodeContainer.innerHTML = '';
+            
+            // Gerar QR Code se disponível
+            if (pixData.qr_code_base64) {
+                const img = document.createElement('img');
+                img.src = `data:image/png;base64,${pixData.qr_code_base64}`;
+                img.style.maxWidth = '200px';
+                img.style.height = 'auto';
+                qrcodeContainer.appendChild(img);
+            } else if (pixData.qr_code) {
+                // Usar biblioteca QRCode se não tiver base64
+                new QRCode(qrcodeContainer, {
+                    text: pixData.qr_code,
+                    width: 200,
+                    height: 200,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+            }
+            
+            // Código copia e cola
+            if (pixData.qr_code) {
+                document.getElementById('pix-copy-paste-code').textContent = pixData.qr_code;
+            }
+            
+            // Armazenar ID do pagamento para verificação de status
+            currentPaymentId = pixData.payment_id;
+            
+            // Mostrar modal
+            pixModal.style.display = 'flex';
+        }
+
+        // Função para exibir página de obrigado
+        function showObrigadoPage(paymentId) {
+            document.getElementById('payment-id-display').textContent = paymentId || 'N/A';
+            // Ocultar container principal e mostrar página de obrigado
+            mainContainer.classList.add('hidden');
+            obrigadoPage.classList.remove('hidden');
+        }
+
+        // Event listeners para página de obrigado
+        const novoProjetoBtn = document.getElementById('novo-projeto-btn');
+        const contactoBtn = document.getElementById('contacto-btn');
+
+        novoProjetoBtn.addEventListener('click', () => {
+            // Limpar dados do projeto anterior
+            document.getElementById('cadastro-form').reset();
+            // Mostrar container principal e ocultar página de obrigado
+            obrigadoPage.classList.add('hidden');
+            mainContainer.classList.remove('hidden');
+            // Redirecionar para página de cadastro
+            showPage('cadastro-page');
+        });
+
+        contactoBtn.addEventListener('click', () => {
+            // Abrir email ou redirecionar para página de contacto
+            window.location.href = 'mailto:contato@exemplo.com?subject=Dúvida sobre projeto';
+        });
+
         // Função para alternar a visibilidade das páginas
         function showPage(pageId) {
             cadastroPage.classList.add('hidden');
@@ -1022,6 +1221,7 @@ service cloud.firestore {
             pagamentoPage.classList.add('hidden');
             contratoPage.classList.add('hidden');
             colaboradorPage.classList.add('hidden');
+            obrigadoPage.classList.add('hidden');
             document.getElementById(pageId).classList.remove('hidden');
 
             // Lógica para esconder/mostrar o indicador de status da base de dados
@@ -1709,19 +1909,29 @@ service cloud.firestore {
 
         gerarQrcodeBtn.addEventListener('click', async () => {
             const totalCusto = parseCurrency(totalGastoElement.textContent);
-            const paymentDetails = {
-                valor: totalCusto,
-                parcelas: parseInt(parcelasGeralSelect.value, 10),
-                cliente: `${nomeInput.value} ${sobrenomeInput.value}`.trim()
+            const pixPaymentData = {
+                amount: totalCusto,
+                description: `Pagamento - ${document.getElementById('tipoProjeto').options[document.getElementById('tipoProjeto').selectedIndex].text}`,
+                email: 'cliente@exemplo.com', // Você pode modificar para capturar do formulário
+                firstName: nomeInput.value,
+                lastName: sobrenomeInput.value,
+                identification: {
+                    type: 'CPF',
+                    number: '12345678909' // Você pode modificar para capturar do formulário
+                }
             };
 
-            const backendUrl = 'https://meuprojetodepagamento-kojx78uyg-wellingtons-projects-02014e31.vercel.app/';
+            const backendUrl = '/';
             
             try {
-                const response = await fetch(`${backendUrl}create_payment`, {
+                // Mostrar loading
+                gerarQrcodeBtn.disabled = true;
+                gerarQrcodeBtn.textContent = 'Gerando PIX...';
+                
+                const response = await fetch(`${backendUrl}create_pix_payment`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(paymentDetails),
+                    body: JSON.stringify(pixPaymentData),
                 });
 
                 if (!response.ok) {
@@ -1730,21 +1940,20 @@ service cloud.firestore {
 
                 const data = await response.json();
                 
-                // Limpa o conteúdo anterior
-                qrcodeContainer.innerHTML = '';
-                
-                // Gera o QR Code com a resposta da API
-                const qrcode = new QRCode(qrcodeContainer, {
-                    text: data.qrCodeData, // Usa a resposta da API
-                    width: 128,
-                    height: 128,
-                    colorDark : "#000000",
-                    colorLight : "#ffffff",
-                    correctLevel : QRCode.CorrectLevel.H
-                });
+                if (data.success) {
+                    // Atualizar modal com dados do PIX
+                    showPixModal(data, totalCusto);
+                } else {
+                    throw new Error(data.error || 'Erro ao criar pagamento PIX');
+                }
 
             } catch (error) {
                 console.error("Erro na requisição:", error);
+                alert('Erro ao gerar pagamento PIX: ' + error.message);
+            } finally {
+                // Restaurar botão
+                gerarQrcodeBtn.disabled = false;
+                gerarQrcodeBtn.textContent = 'Gerar QR Code PIX';
             }
         });
 

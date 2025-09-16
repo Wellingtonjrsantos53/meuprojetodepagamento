@@ -1,10 +1,15 @@
 {
   "version": 2,
-  "functions": {
-    "server.js": {
-      "runtime": "nodejs18.x"
+  "builds": [
+    {
+      "src": "server.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "index.html",
+      "use": "@vercel/static"
     }
-  },
+  ],
   "routes": [
     {
       "src": "/create_pix_payment",

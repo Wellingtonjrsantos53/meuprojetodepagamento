@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const crypto = require('crypto');
 const { MercadoPagoConfig, Payment } = require('mercadopago');
 const cors = require('cors');
 
@@ -89,6 +90,12 @@ app.get('/payment_status/:payment_id', async (req, res) => {
     }
 });
 
-app.listen(port, () => {
-    console.log(`Servidor rodando em http://localhost:${port}`);
-});
+// Para desenvolvimento local
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(port, () => {
+        console.log(`Servidor rodando em http://localhost:${port}`);
+    });
+}
+
+// Para Vercel
+module.exports = app;

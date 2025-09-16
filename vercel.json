@@ -1,14 +1,24 @@
 {
-  "version": 3,
+  "version": 2,
+  "functions": {
+    "server.js": {
+      "runtime": "nodejs18.x"
+    }
+  },
   "routes": [
     {
       "src": "/create_pix_payment",
       "methods": ["POST"],
-      "dest": "server.js"
+      "dest": "/server.js"
+    },
+    {
+      "src": "/payment_status/(.*)",
+      "methods": ["GET"],
+      "dest": "/server.js"
     },
     {
       "src": "/(.*)",
-      "dest": "index.html"
+      "dest": "/index.html"
     }
   ]
 }

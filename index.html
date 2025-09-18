@@ -967,7 +967,7 @@ service cloud.firestore {
 
                 const { results } = await mp.getPaymentMethods({ bin: cardNumber.substring(0, 6) });
                 console.log(results);
-                const paymentMethodId = results[0].id;
+                paymentMethodId = results[0].id;
 
                 const issuers = await mp.getIssuers({ paymentMethodId: paymentMethodId, bin: cardNumber.substring(0, 6) });
                 console.log(issuers);

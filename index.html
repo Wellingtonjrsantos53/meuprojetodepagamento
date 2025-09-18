@@ -965,18 +965,25 @@ service cloud.firestore {
                     return;
                 }
 
+                const { results } = await mp.getPaymentMethods({ bin: cardNumber.substring(0, 6) });
+                console.log(results);
+                const paymentMethodId = results[0].id;
+
+                const issuers = await mp.getIssuers({ paymentMethodId: paymentMethodId, bin: cardNumber.substring(0, 6) });
+                console.log(issuers);
+                issuerId = issuers[0].id;
 
                 const installments = await mp.getInstallments({
                     amount: totalGastoElement.textContent.replace('R$', '').replace('.', '').replace(',', '.').replaceAll(' ', ''),
                     //amount: '10.00',
                     locale: 'pt-BR',
                     processingMode: 'aggregator',
+                    paymentMethodId: paymentMethodId,
                     paymentTypeId: 'credit_card',
+                    issuerId: issuerId,
                     bin: cardNumber.substring(0, 6)
                 });
                 console.log(installments);
-                issuerId = installments[0].issuer.id;
-                paymentMethodId = installments[0].payment_method_id;
 
                 document.getElementById('card-installments').innerHTML = '';
                 installments[0].payer_costs.forEach(installment => {

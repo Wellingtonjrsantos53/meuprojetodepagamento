@@ -970,6 +970,7 @@ service cloud.firestore {
                     amount: totalGastoElement.textContent.replace('R$', '').replace('.', '').replace(',', '.').replaceAll(' ', ''),
                     //amount: '10.00',
                     locale: 'pt-BR',
+                    processingMode: 'aggregator',
                     paymentTypeId: 'credit_card',
                     bin: cardNumber.substring(0, 6)
                 });

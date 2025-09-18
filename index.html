@@ -980,7 +980,8 @@ service cloud.firestore {
                 document.getElementById('card-installments').innerHTML = '';
                 installments[0].payer_costs.forEach(installment => {
                     if(installment.installments <=4) {
-                    document.getElementById('card-installments').innerHTML += `<option value="${installment.installments}">${installment.recommended_message}</option>`;
+                        document.getElementById('card-installments').innerHTML += `<option value="${installment.installments}">${installment.recommended_message}</option>`;
+                    }
                 });
             }
         });

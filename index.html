@@ -14,6 +14,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <!-- Biblioteca para gerar QR Code -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+    <script src="https://sdk.mercadopago.com/js/v2"></script>
+    <script src="https://www.mercadopago.com/v2/security.js" view="checkout"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -543,7 +545,7 @@
                         </div>
                         <div>
                             <label for="card-name" class="block text-sm font-medium text-gray-700">Nome no Cartão</label>
-                            <input type="text" id="card-name" name="card-name" required class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                            <input type="text" id="card-name" name="card-name" required class="uppercase mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
@@ -554,6 +556,12 @@
                                 <label for="card-cvv" class="block text-sm font-medium text-gray-700">CVV</label>
                                 <input type="text" id="card-cvv" name="card-cvv" required class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="123">
                             </div>
+                        </div>
+                        <div>
+                            <label for="card-installments" class="block text-sm font-medium text-gray-700">Parcelas</label>
+                            <select id="card-installments" name="card-installments" required class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                            <option disabled selected value="">Informe o numero do cartão</option>
+                            </select>
                         </div>
                         <div class="pt-4">
                             <button type="submit" id="btn-finalizar-pagamento" class="w-full bg-green-600 text-white font-semibold py-3 px-4 rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200">
@@ -901,6 +909,90 @@ service cloud.firestore {
 
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 
+    <script>
+        //Global functions
+        function parseCurrency(value) {
+            if (typeof value !== 'string') return parseFloat(value) || 0;
+            // Converte o formato BRL para um número float (ex: 'R$ 1.234,56' -> 1234.56)
+            const number = parseFloat(
+                value.replace('R$', '')
+                     .trim()
+                     .replace(/\./g, '')
+                     .replace(',', '.')
+            );
+            return isNaN(number) ? 0 : number;
+        }
+
+
+        // Função para exibir página de obrigado
+        function showObrigadoPage(paymentId) {
+            const mainContainer = document.getElementById('main-container');
+            const obrigadoPage = document.getElementById('obrigado-page');
+            document.getElementById('payment-id-display').textContent = paymentId || 'N/A';
+            // Ocultar container principal e mostrar página de obrigado
+            mainContainer.classList.add('hidden');
+            obrigadoPage.classList.remove('hidden');
+        }
+
+        var issuerId = '';
+        var paymentMethodId = '';
+    </script>
+
+    <script>
+
+        let mp = null;
+        let previousCardNumber = '';
+
+        async function initializeMercadoPago() {
+            mp = new MercadoPago('TEST-ea49e7f5-e1bb-414a-bbcf-1c1b1a73ea0a', {
+                locale: 'pt-BR'
+            });
+            
+            return true;
+        }
+
+         document.addEventListener('DOMContentLoaded', async function() {
+            const mpInitialized = await initializeMercadoPago();
+
+            if (!mpInitialized) {
+                console.warn('Falha ao inicializar Mercado Pago - algumas funcionalidades podem não estar disponíveis');
+                return;
+            }
+         });
+
+        //carregar parcelas do cartao quando o usuario informar o numero do cartao (pelo menos seis digitos)
+        document.getElementById('card-number').addEventListener('input', async function() {
+            const cardNumber = this.value.replace(/\s+/g, '');
+            console.log(cardNumber);
+            if (cardNumber.length >= 6) {
+                const totalGastoElement = document.getElementById('totalGasto');
+                //apenas atualizar as parcelas se os primeiros seis digitos forem diferentes do anterior
+                if (cardNumber.substring(0, 6) !== previousCardNumber) {
+                    previousCardNumber = cardNumber.substring(0, 6);
+                } else {
+                    return;
+                }
+
+
+                const installments = await mp.getInstallments({
+                    amount: totalGastoElement.textContent.replace('R$', '').replace('.', '').replace(',', '.').replaceAll(' ', ''),
+                    //amount: '10.00',
+                    locale: 'pt-BR',
+                    paymentTypeId: 'credit_card',
+                    bin: cardNumber.substring(0, 6)
+                });
+                console.log(installments);
+                issuerId = installments[0].issuer.id;
+                paymentMethodId = installments[0].payment_method_id;
+
+                document.getElementById('card-installments').innerHTML = '';
+                installments[0].payer_costs.forEach(installment => {
+                    document.getElementById('card-installments').innerHTML += `<option value="${installment.installments}">${installment.recommended_message}</option>`;
+                });
+            }
+        });
+    </script>
+
     <!-- Script para navegação, cálculos e integração com Firebase -->
     <script type="module">
         // Importa os serviços do Firebase
@@ -1023,18 +1115,7 @@ service cloud.firestore {
             return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }).replace('R$\xa0', 'R$ ');
         }
 
-        function parseCurrency(value) {
-            if (typeof value !== 'string') return parseFloat(value) || 0;
-            // Converte o formato BRL para um número float (ex: 'R$ 1.234,56' -> 1234.56)
-            const number = parseFloat(
-                value.replace('R$', '')
-                     .trim()
-                     .replace(/\./g, '')
-                     .replace(',', '.')
-            );
-            return isNaN(number) ? 0 : number;
-        }
-
+        
         // Variáveis de página e botões
         const mainContainer = document.getElementById('main-container');
         const cadastroPage = document.getElementById('cadastro-page');
@@ -1184,14 +1265,6 @@ service cloud.firestore {
             
             // Mostrar modal
             pixModal.style.display = 'flex';
-        }
-
-        // Função para exibir página de obrigado
-        function showObrigadoPage(paymentId) {
-            document.getElementById('payment-id-display').textContent = paymentId || 'N/A';
-            // Ocultar container principal e mostrar página de obrigado
-            mainContainer.classList.add('hidden');
-            obrigadoPage.classList.remove('hidden');
         }
 
         // Event listeners para página de obrigado
@@ -1368,7 +1441,7 @@ service cloud.firestore {
                     const data = await response.json();
 
                     if (!data.erro) {
-                        enderecoInput.value = data.logouro;
+                        enderecoInput.value = data.logradouro;
                         bairroInput.value = data.bairro;
                         cidadeInput.value = data.localidade;
                         
@@ -2652,6 +2725,214 @@ Sistema de Gestão de Projetos
             }
         });
 
+    </script>
+    
+    <script>
+        // Máscara para número do cartão
+        document.getElementById('card-number').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+            let formattedValue = value.match(/.{1,4}/g)?.join(' ') || value;
+            if (value.length <= 16) {
+                e.target.value = formattedValue;
+            }
+        });
+
+        // Máscara para data de expiração
+        document.getElementById('card-expiry').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length >= 2) {
+                value = value.substring(0,2) + '/' + value.substring(2,4);
+            }
+            e.target.value = value;
+        });
+
+        // Máscara para CVV (apenas números, máximo 4 dígitos)
+        document.getElementById('card-cvv').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            e.target.value = value.substring(0, 4);
+        });
+
+        // Handler para submissão do formulário de pagamento com cartão
+        document.getElementById('payment-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitButton = document.getElementById('btn-finalizar-pagamento');
+            const originalText = submitButton.textContent;
+            
+            try {
+                // Desabilita o botão durante o processamento
+                submitButton.disabled = true;
+                submitButton.textContent = 'Processando...';
+                
+                // Coleta os dados do formulário
+                const cardNumber = document.getElementById('card-number').value.replace(/\s+/g, '');
+                const cardName = document.getElementById('card-name').value;
+                const cardExpiry = document.getElementById('card-expiry').value;
+                const cardCvv = document.getElementById('card-cvv').value;
+                const installments = document.getElementById('card-installments').value;
+                
+                // Validações básicas
+                if (!cardNumber || cardNumber.length < 13) {
+                    throw new Error('Número do cartão inválido');
+                }
+                if (!cardName.trim()) {
+                    throw new Error('Nome no cartão é obrigatório');
+                }
+                if (!cardExpiry || cardExpiry.length !== 5) {
+                    throw new Error('Data de expiração inválida');
+                }
+                if (!cardCvv || cardCvv.length < 3) {
+                    throw new Error('CVV inválido');
+                }
+                if (!installments) {
+                    throw new Error('Selecione o número de parcelas');
+                }
+                
+                // Extrai mês e ano da data de expiração
+                const [month, year] = cardExpiry.split('/');
+                const fullYear = '20' + year;
+                
+                // Obtém dados do projeto e usuário
+                const totalGasto = document.getElementById('totalGasto').textContent.replace('R$ ', '').replace(',', '.');
+                
+                // Validação dos dados do usuário
+                const nome = document.getElementById('nome').value;
+                const sobrenome = document.getElementById('sobrenome').value;
+                const email = document.getElementById('email').value;
+                const telefone = document.getElementById('telefone').value;
+                const cpf = document.getElementById('cpf').value;
+                const endereco = document.getElementById('endereco').value;
+                const numeroCasa = document.getElementById('numeroCasa').value;
+                const bairro = document.getElementById('bairro').value;
+                const cidade = document.getElementById('cidade').value;
+                const estado = document.getElementById('estado').value;
+                const cep = document.getElementById('cep').value;
+                
+                // Validações dos dados obrigatórios do usuário
+                if (!nome.trim()) {
+                    throw new Error('Nome é obrigatório. Preencha na aba Cadastro.');
+                }
+                if (!sobrenome.trim()) {
+                    throw new Error('Sobrenome é obrigatório. Preencha na aba Cadastro.');
+                }
+                if (!email.trim()) {
+                    throw new Error('Email é obrigatório. Preencha na aba Cadastro.');
+                }
+                if (!telefone.trim()) {
+                    throw new Error('Telefone é obrigatório. Preencha na aba Cadastro.');
+                }
+                if (!cpf.trim()) {
+                    throw new Error('CPF é obrigatório. Preencha na aba Cadastro.');
+                }
+                if (!endereco.trim()) {
+                    throw new Error('Endereço é obrigatório. Preencha na aba Cadastro.');
+                }
+                if (!numeroCasa.trim()) {
+                    throw new Error('Número da casa é obrigatório. Preencha na aba Cadastro.');
+                }
+                if (!bairro.trim()) {
+                    throw new Error('Bairro é obrigatório. Preencha na aba Cadastro.');
+                }
+                if (!cidade.trim()) {
+                    throw new Error('Cidade é obrigatória. Preencha na aba Cadastro.');
+                }
+                if (!estado.trim()) {
+                    throw new Error('Estado é obrigatório. Preencha na aba Cadastro.');
+                }
+                if (!cep.trim()) {
+                    throw new Error('CEP é obrigatório. Preencha na aba Cadastro.');
+                }
+                
+                // Validações dos dados do cartão necessários
+                if (!paymentMethodId) {
+                    throw new Error('Dados do cartão incompletos. Digite pelo menos 6 dígitos do cartão.');
+                }
+                if (!issuerId) {
+                    throw new Error('Dados do cartão incompletos. Digite pelo menos 6 dígitos do cartão.');
+                }
+
+
+                const cardData = {
+                    cardNumber: document.getElementById('card-number').value.replace(/\s/g, ''),
+                    cardholderName: document.getElementById('card-name').value,
+                    cardExpirationMonth: cardExpiry.split('/')[0],
+                    cardExpirationYear: '20' + cardExpiry.split('/')[1],
+                    securityCode: document.getElementById('card-cvv').value,
+                    identificationType: 'CPF',
+                    identificationNumber: document.getElementById('cpf').value.replace(/\D/g, '').replace(/\s/g, '')
+                };
+                
+                try {
+                    const token = await mp.createCardToken(cardData);
+                    cardToken = token.id;
+                } catch (error) {
+                    console.error('Erro ao criar token do cartão:', error);
+                    throw new Error('Erro ao processar dados do cartão: ' + error.message);
+                }
+                
+                // Prepara os dados para envio
+                const paymentData = {
+                    amount: totalGasto,
+                    description: `Pagamento - ${document.getElementById('tipoProjeto').options[document.getElementById('tipoProjeto').selectedIndex].text}`,
+                    email: email,
+                    payment_method_id: paymentMethodId,
+                    issuer_id: issuerId,
+                    sessionId: window.MP_DEVICE_SESSION_ID,
+                    firstName: nome,
+                    lastName: sobrenome,
+                    identification: cpf.replace(/\D/g, ''),
+                    cardToken: cardToken,
+                    installments: installments,
+                    phone: telefone,
+                    address: {
+                        zip_code: cep,
+                        street_name: endereco,
+                        street_number: numeroCasa,
+                        neighborhood: bairro,
+                        city: cidade,
+                        state: estado
+                    }
+                };
+                
+                // Faz a requisição para o backend
+                const response = await fetch('/create_card_payment', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(paymentData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Pagamento processado com sucesso
+                    if (result.status === 'approved') {
+                        // Pagamento aprovado - mostrar página de obrigado
+                        showObrigadoPage(result.payment_id);
+                    } else {
+                        // Pagamento pendente ou rejeitado
+                        alert(`Pagamento processado!\\nID: ${result.payment_id}\\nStatus: ${result.status}\\nDetalhes: ${result.status_detail || ''}`);
+                        
+                        // Se rejeitado, limpar formulário para nova tentativa
+                        if (result.status === 'rejected') {
+                            document.getElementById('payment-form').reset();
+                        }
+                    }
+                } else {
+                    throw new Error(result.error || 'Erro ao processar pagamento');
+                }
+                
+            } catch (error) {
+                console.error('Erro no pagamento:', error);
+                alert('Erro ao processar pagamento: ' + error.message);
+                
+            } finally {
+                // Reabilita o botão
+                submitButton.disabled = false;
+                submitButton.textContent = originalText;
+            }
+        });
     </script>
 </body>
 </html>

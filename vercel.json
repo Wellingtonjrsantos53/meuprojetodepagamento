@@ -17,6 +17,11 @@
       "dest": "/server.js"
     },
     {
+      "src": "/create_card_payment",
+      "methods": ["POST"],
+      "dest": "/server.js"
+    },
+    {
       "src": "/payment_status/(.*)",
       "methods": ["GET"],
       "dest": "/server.js"

@@ -9,7 +9,7 @@ const port = 3001;
 
 // Configuração do MercadoPago
 const client = new MercadoPagoConfig({ 
-    accessToken: 'APP_USR-8155657262249649-091319-ee52419ad3994e7b101524cd6c6fd5ee-290268833',
+    accessToken: process.env.MP_ACCESS_TOKEN,
     options: {
         integratorId: 'dev_aa2d89add88111ebb2fb0242ac130004'
     }
